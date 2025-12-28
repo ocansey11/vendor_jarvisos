@@ -1,0 +1,29 @@
+// ObjectBox prebuilt libraries for JarvisOS
+
+// Core ObjectBox Java library
+java_import {
+    name: "objectbox-java",
+    jars: ["lib/java/objectbox-java-4.0.3.jar"],
+    sdk_version: "current",
+}
+
+// ObjectBox Android wrapper
+java_import {
+    name: "objectbox-android",
+    jars: ["lib/java/objectbox-android.jar"],
+    sdk_version: "current",
+    static_libs: ["objectbox-java"],
+}
+
+// Native JNI library
+cc_prebuilt_library_shared {
+    name: "libobjectbox-jni",
+    target: {
+        android_arm64: {
+            srcs: ["lib/jni/arm64-v8a/libobjectbox-jni.so"],
+        },
+    },
+    strip: {
+        none: true,
+    },
+}
