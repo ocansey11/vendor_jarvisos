@@ -26,13 +26,19 @@ The goal: a complete privacy-first OS where the AI assistant runs entirely on-de
 
 ## Repository Structure
 
-| Repo | Purpose |
-|------|---------|
-| `android/lineage/` | Full LineageOS 21.0 source (~150GB, 1430 repos) |
-| `android/lineage/frameworks/base/` | Android framework — where system services live |
-| `vendor_jarvisos/` | JarvisOS vendor overlay — config, overlays, this spec |
-| `functiongemma-hackathon/` | Hackathon tool-calling work (reference) |
-| `rag-backup/` | RAG pipeline backup (reference) |
+| Repo | Path | Purpose |
+|------|------|---------|
+| LineageOS source | `~/android/lineage/` | Full LineageOS 21.0 source (~150GB, 1430 repos) |
+| frameworks/base fork | `~/android/lineage/frameworks/base/` | Android framework — system services live here |
+| vendor_jarvisos | `~/android/lineage/vendor/jarvisos/` | JarvisOS vendor overlay — config, prebuilts, this spec |
+| cactus fork | `~/android/lineage/vendor/cactus/` | Forked Cactus inference engine with JarvisOS JNI bindings |
+
+**Local manifest:** `~/android/lineage/.repo/local_manifests/jarvos.xml`
+- `ocansey11/android_frameworks_base` → `frameworks/base` (branch: `lineage-23.0`)
+- `ocansey11/vendor_jarvisos` → `vendor/jarvisos` (branch: `main`)
+- `ocansey11/cactus` → `vendor/cactus` (branch: `main`, `sync-s=false`)
+
+All repos track `JarvisOs/main` remote. No upstream remotes — no accidental pulls.
 
 ---
 
@@ -43,75 +49,127 @@ User / App
     |
     | AIDL (Binder IPC)
     v
-JarvisService (System Service — frameworks/base/services/)
+RagService.java  (System Service — frameworks/base/services/core/java/com/android/server/rag/)
     |
-    | JNI
-    v
-CactusWrapper (C++ — connects to Cactus inference engine)
+    +-- JarvisFileObserver     watches Documents/ Downloads/ for file changes
+    |        |
+    |        v
+    |   IndexQueue             BlockingQueue (cap 500), pushes INDEX/REMOVE tasks
+    |        |
+    |        v
+    |   RagIndexWorker         WorkManager job (15min, charging only)
+    |        |
+    |        +-- TextExtractor        file → raw text (.txt .md .csv .pdf .docx)
+    |        +-- ChunkingStrategy     text → chunks  [TODO]
+    |        +-- CactusWrapper.embed  chunk → float[]
+    |        +-- ObjectBox            persist SourceFile, DocumentChunk entities
     |
-    v
-Local LLM (Qwen / Gemma — on device, no cloud)
-    |
-    v
-ObjectBox Vector Store (metadata + memory layer — JarvisOS owned)
-    |
-    v
-Cactus internal ObjectBox (raw vector ops — Cactus owned)
+    +-- processQuery()  (immediate, no constraints)
+             |
+             v
+        MetadataSearch (Stage 1 — free, ObjectBox keyword/score search)
+             |
+             v
+        CactusWrapper.embed + indexQuery (Stage 2 — semantic, expensive)
+             |
+             v
+        CactusWrapper.complete → response string
 ```
 
-**Key insight:** Cactus already ships with its own ObjectBox internally. JarvisOS does NOT reinvent this. JarvisOS owns the **metadata and memory layer** — the context of the user's life (conversations, documents, preferences). Cactus handles inference and raw vector operations.
+**Key insight:** Two-stage retrieval. Stage 1 uses ObjectBox metadata search (free). Stage 2 embeds and does vector search only on the candidates from Stage 1 (expensive but bounded).
 
 ---
 
 ## Tech Stack
 
 - **Base OS:** LineageOS 21.0 (Android 14)
-- **Inference engine:** Cactus (local LLM, C++)
+- **Inference engine:** Cactus (local LLM, C++) — forked at `vendor/cactus`
 - **Vector DB:** ObjectBox 4.0.3 with HNSW indexing (JarvisOS memory layer)
 - **Embedding model:** Qwen / nomic-embed-text
 - **Chat model:** Qwen
 - **Function dispatch:** FunctionGemma (270M, zero-shot only)
-- **Build system:** Android build system (Soong/Blueprint)
-- **Languages:** Java/Kotlin (services), C++ (JNI/Cactus), Python (tooling)
+- **Build system:** Soong (Android.bp)
+- **Languages:** Java (services), C++ (JNI/Cactus), Python (tooling)
+
+---
+
+## File Map — RAG Service
+
+All files in `frameworks/base/services/core/java/com/android/server/rag/`:
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `RagService.java` | ✅ Done | System service entry point, wires everything together |
+| `RagManager.java` | ✅ Done | Public API manager |
+| `IJarvisService.aidl` | ✅ Done | AIDL interface |
+| `JarvisFileObserver.java` | ✅ Done | Watches Documents/ Downloads/ |
+| `IndexQueue.java` | ✅ Done | Singleton BlockingQueue, max 500 |
+| `RagIndexWorker.java` | ✅ Done | WorkManager job, drains queue, calls Cactus |
+| `TextExtractor.java` | ✅ Done | File → text (.txt .md .csv .pdf .docx) |
+| `MetadataSearch.java` | ✅ Done | Stage 1 retrieval, ObjectBox keyword scoring |
+| `CactusWrapper.java` | ✅ Done | JNI bridge to libcactus.so |
+| `ChunkingStrategy.java` | 🔄 TODO | Text → chunks |
+| `VectorStore.java` | 🔄 TODO | ObjectBox HNSW vector ops wrapper |
+| `Android.bp` | ✅ Done | Build config — wires in ObjectBox, WorkManager |
+
+**ObjectBox entities** (all in `rag/` package):
+`SourceFile`, `DocumentChunk`, `Folder`, `Conversation`, `Message`, `UserContext`, `AccessLog`, `TaskMemory`
+
+---
+
+## Cactus Fork — What We Added
+
+`vendor/cactus/Android.bp` — Soong build file compiling `libcactus.so` from all C++ sources.
+
+`vendor/cactus/android/cactus_jni.cpp` — Added JarvisOS system service bindings at the bottom:
+- `Java_com_android_server_rag_CactusWrapper_nativeInit` (+ `cacheIndex` bool param)
+- `Java_com_android_server_rag_CactusWrapper_nativeDestroy`
+- `Java_com_android_server_rag_CactusWrapper_nativeEmbed`
+- `Java_com_android_server_rag_CactusWrapper_nativeIndexInit/Add/Query/Delete/Destroy`
+- `Java_com_android_server_rag_CactusWrapper_nativeComplete`
+- `Java_com_android_server_rag_CactusWrapper_nativeGetLastError`
+
+All static methods (`jclass` not `jobject`) — no Kotlin runtime dependency.
+
+---
+
+## Build System
+
+`vendor/jarvisos/products/jarvisos.mk`:
+```makefile
+PRODUCT_PACKAGES += libcactus libobjectbox-jni
+```
+
+This pulls both native libraries into the system image so `CactusWrapper.java`'s `System.loadLibrary("cactus")` works at runtime.
+
+**TODO:** Wire `jarvisos.mk` into the device product config (`$(call inherit-product, vendor/jarvisos/products/jarvisos.mk)`).
 
 ---
 
 ## Development Phases
 
 ### ✅ Phase 0 — Foundation
-- LineageOS source set up
-- Vendor overlay initialized
-- Manifest entries added
-- AIDL interfaces drafted
+- LineageOS source set up, vendor overlay initialized
+- AIDL interfaces drafted, manifest entries added
 
-### 🔄 Phase 1 — Background Service "Hello World" (CURRENT)
-**Goal:** Prove the system service architecture works end-to-end.
+### ✅ Phase 1 — RAG Service Architecture
+- `RagService` registered as system service in `SystemServer.java`
+- Binder IPC working via AIDL
+- `JarvisFileObserver` → `IndexQueue` → `RagIndexWorker` pipeline wired
+- `TextExtractor`, `MetadataSearch`, `CactusWrapper` implemented
+- ObjectBox entities defined (8 entities, two-stage retrieval schema)
+- ObjectBox wired into `Android.bp`
 
-**Scope:**
-- `JarvisService.java` — system service, starts on boot
-- AIDL interface for apps to communicate with the service
-- Binder IPC working
-- Text-in, text-out (no voice yet)
-- Stubbed LLM response (or simple local inference)
-- Registered in `manifest_services.xml`
+### 🔄 Phase 2 — Core RAG Pipeline (CURRENT)
+- [ ] Initialize ObjectBox store in `RagService`
+- [ ] Implement `ChunkingStrategy.java`
+- [ ] Implement `VectorStore.java`
+- [ ] Wire ObjectBox queries in `MetadataSearch` (remove TODOs)
+- [ ] Wire `jarvisos.mk` into device product config
+- [ ] Run `m libcactus` — verify clean compile
+- [ ] End-to-end indexing test
 
-**Voice:** Deferred to Phase 2. Voice is a client layer on top of this pipe, not part of the pipe itself.
-
-**Location:** `frameworks/base/services/jarvis/`
-
-### Phase 2 — Core RAG Pipeline
-- `ChunkingStrategy.java` — document processing
-- `VectorChunk.java` — ObjectBox entities
-- `VectorStore.java` — semantic search
-- ObjectBox 4.0.3 + HNSW integration
-- Real on-device inference via CactusWrapper
-
-### Phase 3 — CactusWrapper JNI Bridge
-- Java ↔ C++ bridge to Cactus inference engine
-- Android background service support added to upstream Cactus
-- Kevin becomes a credible Cactus contributor
-
-### Phase 4 — Voice + Context Switching
+### Phase 3 — Voice + Context Switching
 - Wake word detection
 - Audio capture at system level
 - TTS response
@@ -122,9 +180,9 @@ Cactus internal ObjectBox (raw vector ops — Cactus owned)
 ## Key Principles
 
 1. **Build reusable features in `lib/` as package code, not example-specific.** Only UI goes in `example/lib`. Extend Cactus, don't reinvent it.
-2. **Small models = zero-shot only.** No system prompt injection for sub-1B models — put all logic in Python/Java post-processing.
-3. **Deterministic post-processing > keyword routing.** Catalogue failure modes, write deterministic fixes.
-4. **Semantic chunking > naive splitting.** Sliding window similarity detection for multi-intent queries.
+2. **Small models = zero-shot only.** No system prompt injection for sub-1B models.
+3. **Deterministic post-processing > keyword routing.**
+4. **Semantic chunking > naive splitting.** Sliding window similarity detection.
 5. **Embeddings at send-time, not upload-time.**
 6. **JarvisOS owns the memory layer. Cactus owns inference.**
 7. **Follow Android's security model.** Public APIs separate from privileged system services.
@@ -137,11 +195,14 @@ Cactus internal ObjectBox (raw vector ops — Cactus owned)
 |-----------|--------|
 | LineageOS source setup | ✅ Done |
 | Vendor overlay init | ✅ Done |
-| AIDL interfaces drafted | ✅ Done |
-| Manifest entry added | ✅ Done |
-| Phase 1 service running on device | 🔄 In progress |
+| AIDL interfaces + system service registration | ✅ Done |
+| Phase 1 RAG service architecture | ✅ Done |
+| Cactus fork + JarvisOS JNI bindings | ✅ Done |
+| Android.bp for libcactus | ✅ Done |
+| ObjectBox store initialized | 🔄 Next |
+| m libcactus clean compile | 🔄 Next |
+| End-to-end indexing pipeline | 📅 Planned |
 | March 2025 presentation | 🎯 Target |
-| Cactus upstream contribution | 📅 Planned |
 
 ---
 
@@ -152,17 +213,6 @@ Cactus internal ObjectBox (raw vector ops — Cactus owned)
 | Early 2026 | Phase 0 complete, AIDL + manifest work done |
 | Hackathon | Won 2nd place Google DeepMind x Cactus — tool calling optimization, semantic chunking |
 | Feb 2026 | dev.talk speaker slot confirmed |
-| Mar 2026 | Reconnected, filesystem access established, AGENTS.md created, Phase 1 scoped |
-
----
-
-## Next Actions (Phase 1 Sprint)
-
-- [ ] Create `frameworks/base/services/jarvis/` directory
-- [ ] Write `JarvisService.java`
-- [ ] Write AIDL interface `IJarvisService.aidl`
-- [ ] Register in `manifest_services.xml`
-- [ ] Wire into `SystemServer.java`
-- [ ] Test with a simple client app
-- [ ] Presentation prep
-- [ ] Blog post draft
+| Mar 2026 session 1 | Reconnected, filesystem access established, AGENTS.md created, Phase 1 scoped |
+| Mar 2026 session 2 | Phase 1 complete — RagService, FileObserver, IndexQueue, RagIndexWorker, TextExtractor, MetadataSearch, CactusWrapper, ObjectBox entities all implemented and committed |
+| Mar 2026 session 3 | Cactus fork explored — existing JNI layer discovered, JarvisOS bindings added to cactus_jni.cpp, Android.bp written, jarvisos.mk created, all vendor repos locked to JarvisOs/main |
