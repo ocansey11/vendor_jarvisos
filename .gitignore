@@ -1,0 +1,5 @@
+# Ignore markdown files from git tracking
+*.md
+
+# Keep the hidden readme if needed
+!.README.md
