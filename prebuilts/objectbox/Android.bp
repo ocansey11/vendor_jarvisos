@@ -10,9 +10,8 @@ java_import {
 // ObjectBox Android wrapper
 java_import {
     name: "objectbox-android",
-    jars: ["lib/java/objectbox-android.jar"],
+    jars: ["lib/java/objectbox-android.jar", "lib/java/objectbox-java-4.0.3.jar"],
     sdk_version: "current",
-    static_libs: ["objectbox-java"],
 }
 
 // Native JNI library
