@@ -1,216 +1,128 @@
-# HANDOFF.md — Session 5 → Session 6
-> Written by Claude at end of Session 5 (March 2026).
-> Next Claude: read this first, then AGENTS.md, then the files listed below.
-> Kevin has memory issues so this file bridges the gap between sessions.
+# JarvisOS Handoff — Session 7 (Mar 18 2026)
+
+## READ THIS FIRST
+
+The build environment has a fundamental mismatch that needs fixing at uni:
+- Base LineageOS source: `lineage-21.0` (Android 14)
+- Target device (Nothing Phone 2 / Pong): requires `lineage-22.2` minimum
+- Decision: re-sync base on `lineage-22.2` at university on fast connection
 
 ---
 
-## MD Maintenance Protocol (read every session)
+## Step 1 — Re-sync at uni (do this first, on fast connection)
 
-At the **end of every session**, Claude must:
-
-1. **Update AGENTS.md** — file map statuses, phase completion, session log entry
-2. **Update HANDOFF.md** — rewrite "What was completed" + "What comes next" sections
-3. **Update PROGRESS.md** — if any learning/quizzing happened, log concept + quiz result
-4. **Check for a CHECKPOINT.md** at `~/android/lineage/vendor/jarvisos/CHECKPOINT.md`
-   - If it exists: merge its contents into AGENTS.md where relevant, then delete it
-   - If it doesn't exist: no action needed
-
-### What is CHECKPOINT.md?
-A scratch file Kevin or Claude can write mid-session to capture decisions, half-finished thoughts, or implementation notes that aren't ready for AGENTS.md yet. Think of it as a sticky note. Once it's been merged into AGENTS.md it gets deleted — it should never accumulate.
-
-### MD size discipline
-- **AGENTS.md** — architectural truth only. No session chatter. If a section grows too long, summarise it.
-- **HANDOFF.md** — current session only. Rewrite it each session, don't append.
-- **PROGRESS.md** — quiz log only. One row per concept. Keep it tabular.
-- **CURRICULUM.md** — update active track + assigned reading only.
-
----
-
-## How to start the session
-
-### Step 1 — Read these files in order
-```
-\\wsl.localhost\Ubuntu-24.04\home\kevin\android\lineage\vendor\jarvisos\AGENTS.md
-\\wsl.localhost\Ubuntu-24.04\home\kevin\android\lineage\vendor\jarvisos\HANDOFF.md   ← this file
-\\wsl.localhost\Ubuntu-24.04\home\kevin\learning\CURRICULUM.md
-\\wsl.localhost\Ubuntu-24.04\home\kevin\learning\java\PROGRESS.md
-```
-
-### Step 2 — Confirm git state is clean
-Ask Kevin to run:
 ```bash
-cd ~/android/lineage/frameworks/base && git log --oneline -5 && git branch -vv
-cd ~/android/lineage/vendor/jarvisos  && git log --oneline -3 && git branch -vv
-cd ~/android/lineage/vendor/cactus    && git log --oneline -3 && git branch -vv
+cd ~/android/lineage
+repo init -u https://github.com/LineageOS/android.git -b lineage-22.2 --git-lfs
+repo sync -c -j4 --no-clone-bundle 2>&1 | tee ~/sync.log
 ```
-Expected: all on correct branches, no conflict markers anywhere.
 
-### Step 3 — Ask Kevin what mode he wants
-Kevin works in explicit modes. Always ask at session start:
-- **Code Sprint** — just build things, minimal explanation
-- **Teaching** — concepts + quiz, one at a time
-- **Explanation** — understand something deeply before touching code
-- **Review** — read through files together and audit them
+Run inside tmux (`tmux attach -t jarvis`) so it survives if connection drops.
+Takes ~2-3 hours on a fast connection. ~150GB.
 
-Kevin's note at end of Session 5: *"Full Review + Cactus Exploration"*
+## Step 2 — After sync, update pong.xml
 
----
+```bash
+cat > ~/android/lineage/.repo/local_manifests/pong.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <project name="LineageOS/android_device_nothing_Pong"
+           path="device/nothing/Pong"
+           remote="github"
+           revision="lineage-22.2" />
+</manifest>
+EOF
 
-## What was completed this session (Session 6)
-
-### Presentation work
-- Two memory slides scoped: slide 1 = problem with naive RAG + two-stage retrieval design, slide 2 = current implementation as placeholder pending GraphRAG
-- Slide 1 copy corrected: "no LLM inference, no embedding call" replaces "no model, no compute" — HNSW explained as graph index not neural model
-- PNG export of JarvisOS memory architecture diagram generated for slide insertion
-- GraphRAG gap identified and logged — current system is optimised traditional RAG, not GraphRAG
-- MetadataSearch semantic fallback gap identified and logged
-
-### Tool Registry architecture designed (Phase 4)
-- Full two-layer discovery model designed: Layer 1 = curated first-party (vendor/jarvisos/tools/), Layer 2 = declared via `<meta-data>` tag
-- `<meta-data>` confirmed as correct Android mechanism — used by Firebase, Crashlytics, AdMob, guaranteed post-install
-- ObjectBox confirmed as sole storage layer — no SQLite needed
-- `RegisteredApp` + `RegisteredTool` entity schema designed with `ToOne` relationship and HNSW index on tool embeddings
-- Query-time filter flow designed: embed query → HNSW top-k → inject into Cactus → FunctionGemma selects
-- Naming convention open question logged: `ai.jarvisos.tool.*` requires OS-specific knowledge from devs — ContentProvider or `res/xml/jarvis_tools.xml` may be more generic
-- AGENTS.md Phase 4 section fully rewritten
-
-### Known gaps added to AGENTS.md
-- MetadataSearch semantic fallback (Phase 3)
-- GraphRAG not yet implemented (Phase 4/5)
-
----
-
-## What was completed this session (Session 5)
-
-### Phase 2 — DONE ✅
-All files in `frameworks/base/services/core/java/com/android/server/rag/`:
-
-| File | What changed |
-|------|-------------|
-| `Chunk.java` | Was a duplicate ChunkingStrategy — rewritten as proper data class |
-| `ChunkingStrategy.java` | Fully implemented: sentence-boundary splitting, OVERLAP_SIZE=50, singleton |
-| `MetadataSearch.java` | All 6 ObjectBox passes wired (alias/tags/fileName/Folder/TaskMemory/AccessLog) |
-| `RagIndexWorker.java` | Full pipeline: hash check → TextExtractor → ChunkingStrategy → embed → indexAdd → ObjectBox |
-| `RagManager.java` | Package fixed `android.rag` → `android.app.rag`, `isIndexed()` added, `requireService()` pattern |
-| `IRagService.aidl` | Package fixed to `android.app.rag`, `isIndexed()` added |
-| `RagService.java` | `isIndexed()` implemented in mBinder stub with real ObjectBox query |
-
-All committed and pushed to `origin/lineage-23.0`.
-
----
-
-## What comes next
-
-### Most pressing — naming convention decision (Phase 4 blocker)
-Before implementing `ToolScanner`, the protocol naming needs a decision:
-- `ai.jarvisos.tool.*` prefix in meta-data? (OS-specific, simple)
-- `res/xml/jarvis_tools.xml` file inside APK? (cleaner, no OS prefix in app code)
-- `JarvisToolProvider` ContentProvider? (most powerful, most work for app devs)
-Discuss with Sam before writing any code.
-
-### Phase 3 (still pending)
-
-### Priority 1 — Full file review (Kevin's request)
-Go through EVERY Java file in:
+repo sync device/nothing/Pong -c --no-clone-bundle -j4
 ```
-\\wsl.localhost\Ubuntu-24.04\home\kevin\android\lineage\frameworks\base\services\core\java\com\android\server\rag\
+
+## Step 3 — Rebase frameworks/base onto lineage-22.2
+
+Your JarvisOS code needs to sit on top of the new base:
+
+```bash
+cd ~/android/lineage/frameworks/base
+git fetch lineage
+git rebase lineage/lineage-22.2
 ```
-22 files total. Check for:
-- Stale TODOs that are now implemented
-- Import consistency (`android.app.rag` vs `android.rag`)
-- Any leftover conflict markers
-- Anything that doesn't compile logically
 
-### Priority 2 — Cactus exploration
-Kevin has only explored `graph/` in the Cactus source. He wants to understand the rest before wiring handles into RagService.
-
-Cactus fork lives at:
+Expect some conflicts — resolve the same way as before (cat > file << EOF pattern).
+Then push:
+```bash
+git push origin lineage-21.0 --force
 ```
-\\wsl.localhost\Ubuntu-24.04\home\kevin\android\lineage\vendor\cactus\
-```
-Unexplored folders:
-- `engine/`  — the core inference loop
-- `kernel/`  — low-level compute kernels (SIMD/NEON)
-- `ffi/`     — C FFI layer that our JNI calls into
-- `models/`  — model loading/quantization logic
 
-Approach: read each folder's key headers, explain what they do, then connect to how `CactusWrapper.java` calls them. Kevin learns best with code in front of him — use Explanation mode here.
+## Step 4 — Lunch and build
 
-### Priority 3 — Build verification
 ```bash
 cd ~/android/lineage
 source build/envsetup.sh
-lunch lineage_<device>-userdebug
-m libcactus
-```
-Note: Kevin has never successfully run `m libcactus` yet. The Android.bp at `vendor/cactus/Android.bp` was written but never compiled. Expect errors — work through them.
-
-Also still TODO:
-```makefile
-# Wire jarvisos.mk into device product config:
-$(call inherit-product, vendor/jarvisos/products/jarvisos.mk)
+breakfast Pong
+export SOONG_ALLOW_MISSING_DEPENDENCIES=true
+m libcactus 2>&1 | tee ~/cactus_build.log
 ```
 
 ---
 
-## Key architectural facts to keep in mind
+## Code state — ALL SAFE AND PUSHED
 
-- **ObjectBox owns metadata. Cactus owns vectors.** Never store `float[]` in ObjectBox entities.
-- **`DocumentChunk.cactusIndexId`** is the bridge — it's an int ID into Cactus's binary `index.bin`
-- **Two-stage retrieval**: ObjectBox narrows (free) → Cactus re-ranks semantically (bounded cost)
-- **`system_server` process** — memory leaks crash the whole phone. Always release JNI resources.
-- **No Kotlin in system_server** — CactusWrapper uses static JNI methods (`jclass` not `jobject`)
-- **`cat > file << 'EOF'`** is the reliable way to write files in WSL when git conflict markers interfere
+| Repo | Branch | Remote | Status |
+|------|--------|--------|--------|
+| frameworks/base | lineage-21.0 | origin/lineage-21.0 | ✅ clean |
+| vendor/jarvisos | main | JarvisOs/main | ✅ clean |
+| vendor/cactus | main | JarvisOs/main | ✅ clean |
 
-## Package map (important — was wrong before, now fixed)
+---
+
+## What was done this session (Session 7)
+
+### Code
+- `ModelRegistry.java` — new file. Singleton map of name → (modelHandle, indexHandle).
+  Replaces static handles in RagIndexWorker. Adding a new model is one register() call.
+- `RagIndexWorker.java` — removed static handle fields + ensureHandles(). Now calls
+  `ModelRegistry.getInstance().getReady("rag")` per task.
+- `RagService.java` — Step 2 now registers "rag" + "tools" via ModelRegistry. Passes
+  tools handles to ToolScannerService. onDestroy() added — properly tears down everything.
+- `vendor/jarvisos/prebuilts/objectbox/Android.bp` — fixed `static_libs` → jars array
+  (java_import doesn't support static_libs).
+
+### Git housekeeping
+- Renamed frameworks/base branch `lineage-23.0` → `lineage-21.0` (was just a name, not a version)
+- Force pushed to origin/lineage-21.0, deleted lineage-23.0 from remote
+- Updated jarvos.xml to point to lineage-21.0
+- Resolved vendor/jarvisos diverged branch via git rebase
+
+### Build attempts
+- Tried Pong on lineage-21.0 — Pong only exists on lineage-22.2+, failed
+- Tried Pixel 6 (raviole) on lineage-21.0 — synced raviole + gs101 successfully
+- breakfast lineage_oriole pulled more dependencies (raviole-kernel, gs-common)
+- Confirmed build system works — Soong bootstraps correctly with a proper device tree
+- Decision: stop fighting lineage-21.0, do proper re-sync at uni on lineage-22.2
+
+### Manifest state
+- `.repo/local_manifests/jarvos.xml` — correct, points to lineage-21.0
+- `.repo/local_manifests/pong.xml` — empty placeholder, will be updated after sync
+- `.repo/local_manifests/pixel6.xml` — leftover from failed attempt, safe to delete
+
+### Device trees on disk (will survive the re-sync)
+- `device/google/raviole/` — Pixel 6 tree (lineage-21)
+- `device/google/gs101/` — Tensor chip common (lineage-21)
+- `device/nothing/Pong/` — Nothing Phone 2 (lineage-21 from Nothing-phone-2-Development fork)
+
+---
+
+## Key architectural facts
+
+- ObjectBox owns metadata. Cactus owns vectors.
+- `DocumentChunk.cactusIndexId` is the bridge into Cactus binary index
+- Two-stage retrieval: ObjectBox narrows (free) → Cactus re-ranks (bounded)
+- ModelRegistry: "rag" model for documents, "tools" model for tool embeddings
+- Same model file for both — separate index directories — indexes must never be mixed
+- system_server process — memory leaks crash the whole phone
+- No Kotlin in system_server
+
+## Package map
 ```
-android.app.rag          — public API layer (RagManager, IRagService)
+android.app.rag          — public API (RagManager, IRagService)
 com.android.server.rag   — system service implementation (RagService, all workers)
 ```
-
----
-
-## File paths cheat sheet
-
-```
-# Source
-~/android/lineage/frameworks/base/services/core/java/com/android/server/rag/   ← all 22 Java files
-~/android/lineage/vendor/cactus/                                                 ← Cactus fork
-~/android/lineage/vendor/cactus/android/cactus_jni.cpp                          ← JNI bindings (ours at bottom)
-~/android/lineage/vendor/cactus/Android.bp                                       ← Soong build
-~/android/lineage/vendor/jarvisos/products/jarvisos.mk                           ← product makefile
-~/android/lineage/.repo/local_manifests/jarvos.xml                              ← repo manifest
-
-# Docs / memory
-~/android/lineage/vendor/jarvisos/AGENTS.md                                      ← project spec
-~/android/lineage/vendor/jarvisos/HANDOFF.md                                     ← this file
-~/learning/CURRICULUM.md                                                          ← learning tracker
-~/learning/java/PROGRESS.md                                                       ← quiz history
-~/learning/java/effective-java/ch02-creating-and-destroying-objects/NOTES.md     ← chapter notes
-
-# Skills (gitignored)
-~/android/lineage/vendor/jarvisos/skills/TEACHING_MODE.md
-~/android/lineage/vendor/jarvisos/skills/CODE_SPRINT_MODE.md
-~/android/lineage/vendor/jarvisos/skills/EXPLANATION_MODE.md
-```
-
----
-
-## Kevin's working style (important)
-- Prefers **chunk-by-chunk** — never dump everything at once
-- Wants to **understand before implementing** — read code first, then build
-- Memory is self-described as bad — always recap what we're doing and why
-- Likes competitive/algorithmic framing — "why is this approach better than X"
-- Clean senior-engineer style code — no comments unless they add real value
-- Will say "we good?" to confirm before moving on — wait for that
-
----
-
-## Git state at end of Session 5
-```
-frameworks/base:  lineage-23.0  →  origin/lineage-23.0  (ahead 0, clean)
-vendor/jarvisos:  main          →  JarvisOs/main
-vendor/cactus:    main          →  JarvisOs/main
-```
-lineage-21.0 branch deleted (it was the wrong branch from a misconfiguration).
