@@ -1,44 +1,45 @@
 # AGENTS.md — JarvisOS Project Spec
-> This file is the persistent memory and architectural spec for JarvisOS.
-> Claude reads this at the start of every session. Kevin updates it after every sprint.
-> Last updated: March 2026
+> Persistent memory and architectural spec for JarvisOS.
+> Read at the start of every session. Update after every sprint.
+> Last updated: April 2026
 
 ---
 
 ## Project Vision
 
-JarvisOS is a privacy-first Android ROM built on LineageOS that integrates local AI capabilities without cloud dependencies. It solves two critical privacy violations:
-1. Android's constant tracking (devices ping Google servers every ~4.5 minutes, transmitting IMEI and hardware data)
-2. Cloud-based LLMs that store user conversations for training
-
-The goal: a complete privacy-first OS where the AI assistant runs entirely on-device.
+JarvisOS is a privacy-first Android OS built on LineageOS that runs LLM inference,
+RAG, and tool-calling as privileged Android system services — baked into the OS,
+not running as apps. No cloud dependencies. All inference on-device via Cactus.
 
 ---
 
 ## Team
 
 - **Kevin** — Lead, Android system layer, RAG architecture, project vision
-- **Sam** — NLP engineer
+- **Sam** — NLP engineer, Cactus integration
+- **Desmond** — In-house app development (integrates with Tool Registry)
+- **Chindu** — Contributor, PR workflow
 - **Gerald** — Security and configuration
-- **Desmond** — Occasional contributor
 
 ---
 
 ## Repository Structure
 
-| Repo | Path | Purpose |
-|------|------|---------|
-| LineageOS source | `~/android/lineage/` | Full LineageOS 21.0 source (~150GB, 1430 repos) |
-| frameworks/base fork | `~/android/lineage/frameworks/base/` | Android framework — system services live here |
-| vendor_jarvisos | `~/android/lineage/vendor/jarvisos/` | JarvisOS vendor overlay — config, prebuilts, this spec |
-| cactus fork | `~/android/lineage/vendor/cactus/` | Forked Cactus inference engine with JarvisOS JNI bindings |
+| Repo | GitHub | Path (local) | Branch |
+|------|--------|--------------|--------|
+| Android framework fork | ocansey11/android_frameworks_base | `frameworks/base/` | `lineage-21.0` |
+| JarvisOS vendor overlay | ocansey11/vendor_jarvisos | `vendor/jarvisos/` | `main` |
+| Cactus inference engine | ocansey11/cactus | `vendor/cactus/` | `main` |
 
-**Local manifest:** `~/android/lineage/.repo/local_manifests/jarvos.xml`
-- `ocansey11/android_frameworks_base` → `frameworks/base` (branch: `lineage-23.0`)
-- `ocansey11/vendor_jarvisos` → `vendor/jarvisos` (branch: `main`)
-- `ocansey11/cactus` → `vendor/cactus` (branch: `main`, `sync-s=false`)
+**Local manifest:** `.repo/local_manifests/jarvos.xml`
+- Removes LineageOS default `frameworks/base`, replaces with `ocansey11/android_frameworks_base`
+- Adds `ocansey11/vendor_jarvisos` → `vendor/jarvisos`
+- Adds `ocansey11/cactus` → `vendor/cactus` (`sync-s=false`)
 
-All repos track `JarvisOs/main` remote. No upstream remotes — no accidental pulls.
+**Build environment:**
+- WSL2 Ubuntu 24.04 on Windows
+- lineage-22.2 re-sync pending — must do at uni on fast connection
+- Current base: lineage-21.0. All JarvisOS code is pure Java — no device-specific deps
 
 ---
 
@@ -49,323 +50,189 @@ User / App
     |
     | AIDL (Binder IPC)
     v
-RagService.java  (System Service — frameworks/base/services/core/java/com/android/server/rag/)
+RagService.java  (com.android.server.rag)
     |
-    +-- JarvisFileObserver     watches Documents/ Downloads/ for file changes
-    |        |
-    |        v
-    |   IndexQueue             BlockingQueue (cap 500), pushes INDEX/REMOVE tasks
-    |        |
-    |        v
-    |   RagIndexWorker         WorkManager job (15min, charging only)
-    |        |
-    |        +-- TextExtractor        file → raw text (.txt .md .csv .pdf .docx)
-    |        +-- ChunkingStrategy     text → chunks  [TODO]
-    |        +-- CactusWrapper.embed  chunk → float[]
-    |        +-- ObjectBox            persist SourceFile, DocumentChunk entities
+    +-- ToolDispatcher          tool path (runs first on every query)
+    |       |
+    |       +-- ToolScannerService   discovers tools from installed APKs
+    |       +-- AppRecord / ToolRecord   ObjectBox entities
+    |       +-- CactusWrapper.embed + indexQuery (tools index)
+    |       +-- sendBroadcast → app BroadcastReceiver → ResultReceiver
     |
-    +-- processQuery()  (immediate, no constraints)
+    +-- JarvisFileObserver      watches Documents/ Downloads/ Pictures/
+    |       |
+    |       v
+    |   IndexQueue              BlockingQueue (cap 500)
+    |       |
+    |       v
+    |   RagIndexWorker          WorkManager (15min, charging only)
+    |       |
+    |       +-- TextExtractor        file → raw text
+    |       +-- ChunkingStrategy     text → chunks
+    |       +-- CactusWrapper.embed  chunk → float[]
+    |       +-- ObjectBox            persist SourceFile, DocumentChunk
+    |
+    +-- processQuery()
              |
              v
-        MetadataSearch (Stage 1 — free, ObjectBox keyword/score search)
+        MetadataSearch (Stage 1 — ObjectBox keyword/score)
              |
              v
-        CactusWrapper.embed + indexQuery (Stage 2 — semantic, expensive)
+        CactusWrapper.embed + indexQuery (Stage 2 — semantic)
              |
              v
         CactusWrapper.complete → response string
 ```
 
-**Key insight:** Two-stage retrieval. Stage 1 uses ObjectBox metadata search (free). Stage 2 embeds and does vector search only on the candidates from Stage 1 (expensive but bounded).
-
 ---
 
 ## Tech Stack
 
-- **Base OS:** LineageOS 23.0 (Android 15)
-- **Inference engine:** Cactus (local LLM, C++) — forked at `vendor/cactus`
-- **Vector DB:** ObjectBox 4.0.3 with HNSW indexing (JarvisOS memory layer)
-- **Embedding model:** Qwen / nomic-embed-text
-- **Chat model:** Qwen
-- **Function dispatch:** FunctionGemma (270M, zero-shot only)
+- **Base OS:** LineageOS 21.0 (Android 14) — pending upgrade to 22.2
+- **Inference engine:** Cactus (forked) — `vendor/cactus/`
+- **Vector DB:** ObjectBox 4.0.3 with HNSW
+- **Embedding / chat model:** Qwen / nomic-embed-text
+- **Tool selection model:** FunctionGemma (270M, zero-shot only)
 - **Build system:** Soong (Android.bp)
-- **Languages:** Java (services), C++ (JNI/Cactus), Python (tooling)
+- **Languages:** Java (services), C++ (JNI/Cactus)
 
 ---
 
-## File Map — RAG Service
+## File Map
 
-All files in `frameworks/base/services/core/java/com/android/server/rag/`:
+All service code in `frameworks/base/services/core/java/com/android/server/rag/`:
 
-| File | Status | Purpose |
-|------|--------|---------|
-| `RagService.java` | ✅ Done | System service entry point, wires everything together |
-| `RagManager.java` | ✅ Done | Public API manager |
-| `IJarvisService.aidl` | ✅ Done | AIDL interface |
-| `JarvisFileObserver.java` | ✅ Done | Watches Documents/ Downloads/ |
-| `IndexQueue.java` | ✅ Done | Singleton BlockingQueue, max 500 |
-| `RagIndexWorker.java` | ✅ Done | WorkManager job, drains queue, calls Cactus |
-| `TextExtractor.java` | ✅ Done | File → text (.txt .md .csv .pdf .docx) |
-| `MetadataSearch.java` | ✅ Done | Stage 1 retrieval, ObjectBox keyword scoring |
-| `CactusWrapper.java` | ✅ Done | JNI bridge to libcactus.so |
-| `ChunkingStrategy.java` | ✅ Done | Sentence-boundary splitting, overlap carry-over, singleton |
-| `Chunk.java` | ✅ Done | Data class passed between ChunkingStrategy → RagIndexWorker |
-| `VectorStore.java` | 🔄 TODO | ObjectBox HNSW vector ops wrapper |
-| `Android.bp` | ✅ Done | Build config — wires in ObjectBox, WorkManager |
-
-**ObjectBox entities** (all in `rag/` package):
-`SourceFile`, `DocumentChunk`, `Folder`, `Conversation`, `Message`, `UserContext`, `AccessLog`, `TaskMemory`
-
----
-
-## Cactus Fork — What We Added
-
-`vendor/cactus/Android.bp` — Soong build file compiling `libcactus.so` from all C++ sources.
-
-`vendor/cactus/android/cactus_jni.cpp` — Added JarvisOS system service bindings at the bottom:
-- `Java_com_android_server_rag_CactusWrapper_nativeInit` (+ `cacheIndex` bool param)
-- `Java_com_android_server_rag_CactusWrapper_nativeDestroy`
-- `Java_com_android_server_rag_CactusWrapper_nativeEmbed`
-- `Java_com_android_server_rag_CactusWrapper_nativeIndexInit/Add/Query/Delete/Destroy`
-- `Java_com_android_server_rag_CactusWrapper_nativeComplete`
-- `Java_com_android_server_rag_CactusWrapper_nativeGetLastError`
-
-All static methods (`jclass` not `jobject`) — no Kotlin runtime dependency.
-
----
-
-## Build System
-
-`vendor/jarvisos/products/jarvisos.mk`:
-```makefile
-PRODUCT_PACKAGES += libcactus libobjectbox-jni
 ```
-
-This pulls both native libraries into the system image so `CactusWrapper.java`'s `System.loadLibrary("cactus")` works at runtime.
-
-**TODO:** Wire `jarvisos.mk` into the device product config (`$(call inherit-product, vendor/jarvisos/products/jarvisos.mk)`).
+rag/
+├── RagService.java              ✅ System service entry point
+├── IRagService.aidl             ✅ Binder interface (android.app.rag package)
+├── Android.bp                   ✅ Build config
+│
+├── core/
+│   ├── JarvisStore.java         ✅ ObjectBox singleton
+│   ├── ModelRegistry.java       ✅ Named (modelHandle, indexHandle) pairs
+│   ├── IndexQueue.java          ✅ Singleton BlockingQueue, cap 500
+│   ├── RagManager.java          ✅ Public API manager
+│   └── RagException.java        ✅
+│
+├── inference/
+│   └── CactusWrapper.java       ✅ JNI bridge — only entry point to Cactus
+│
+├── indexing/
+│   ├── RagIndexWorker.java      ✅ WorkManager background indexer
+│   ├── JarvisFileObserver.java  ✅ Watches Documents/Downloads/Pictures
+│   ├── TextExtractor.java       ✅ File → raw text (.txt .md .csv .pdf .docx)
+│   └── ChunkingStrategy.java    ✅ Sentence-boundary splitting + overlap
+│
+├── search/
+│   └── MetadataSearch.java      ✅ Stage 1 — ObjectBox keyword scoring (6 passes)
+│
+├── model/                       ✅ ObjectBox entities
+│   ├── SourceFile.java
+│   ├── DocumentChunk.java
+│   ├── Chunk.java
+│   ├── Conversation.java
+│   ├── Message.java
+│   ├── Folder.java
+│   ├── UserContext.java
+│   ├── AccessLog.java
+│   └── TaskMemory.java
+│
+└── tools/                       🔄 Phase 4 — Tool Registry
+    ├── AppRecord.java           ✅ ObjectBox: one per installed app
+    ├── ToolRecord.java          ✅ ObjectBox: one per tool, ToOne<AppRecord>
+    ├── ToolScannerService.java  ✅ Scans APKs on install, embeds tools
+    ├── ToolDispatcher.java      ✅ Resolves + fires tools via broadcast
+    ├── ToolDefinition.java      ❌ TOMBSTONE — do not reference
+    └── IToolRegistry.aidl       📅 TODO — public API for tool registry
+```
 
 ---
 
 ## Development Phases
 
 ### ✅ Phase 0 — Foundation
-- LineageOS source set up, vendor overlay initialized
-- AIDL interfaces drafted, manifest entries added
+LineageOS setup, AIDL interfaces, manifest entries, vendor overlay initialized.
 
 ### ✅ Phase 1 — RAG Service Architecture
-- `RagService` registered as system service in `SystemServer.java`
-- Binder IPC working via AIDL
-- `JarvisFileObserver` → `IndexQueue` → `RagIndexWorker` pipeline wired
-- `TextExtractor`, `MetadataSearch`, `CactusWrapper` implemented
-- ObjectBox entities defined (8 entities, two-stage retrieval schema)
-- ObjectBox wired into `Android.bp`
+RagService registered in SystemServer. Binder IPC via AIDL. JarvisFileObserver →
+IndexQueue → RagIndexWorker pipeline. TextExtractor, MetadataSearch, CactusWrapper.
+ObjectBox entities defined (8 entities).
 
-### ✅ Phase 2 — Core RAG Pipeline (COMPLETE)
-- [x] ObjectBox store initialized in `RagService` via `JarvisStore.init(STORE_DIR)`
-- [x] `Chunk.java` — proper data class (was duplicate ChunkingStrategy)
-- [x] `ChunkingStrategy.java` — fully implemented, sentence-boundary + overlap, singleton
-- [x] `MetadataSearch.java` — all 6 passes wired to real ObjectBox queries (alias/tags/fileName/Folder/TaskMemory/AccessLog)
-- [x] `RagIndexWorker.java` — full pipeline: hash check → TextExtractor → ChunkingStrategy → embed → indexAdd → ObjectBox persist; REMOVE task implemented
-- [x] `RagManager.java` — package fixed to `android.app.rag`, `isIndexed()` added, `requireService()` pattern
-- [x] `IRagService.aidl` — package fixed to `android.app.rag`, `isIndexed()` added
-- [x] `RagService.java` — `isIndexed()` implemented in Binder stub
+### ✅ Phase 2 — Core RAG Pipeline
+Full pipeline: hash check → TextExtractor → ChunkingStrategy → embed → indexAdd →
+ObjectBox persist. MetadataSearch all 6 passes wired. RagManager + IRagService
+package fixed to `android.app.rag`. isIndexed() across full Binder stack.
 
-### 🔄 Phase 3 — Build Verification + Cactus Exploration (NEXT)
-- [ ] Wire `jarvisos.mk` into device product config (`$(call inherit-product, ...)`)
-- [ ] Run `m libcactus` — verify clean Soong compile
-- [ ] Explore Cactus source: `engine/`, `kernel/`, `ffi/`, `models/` folders (only `graph/` explored so far)
-- [ ] Understand Cactus embedding pipeline end-to-end before wiring CactusWrapper handles into RagService
-- [ ] End-to-end indexing test on real device
+### ✅ Phase 3 — Model Registry
+ModelRegistry singleton — named map of `{ name → (modelHandle, indexHandle, dim, indexDir) }`.
+Two entries registered at boot: "rag" (documents) and "tools" (tool embeddings).
+Same model file, separate index directories — indexes never mixed.
+RagIndexWorker updated to use ModelRegistry.getReady("rag") per task.
 
-### Phase 4 — Tool Registry (Android-native MCP)
+### 🔄 Phase 4 — Tool Registry
+**Goal:** Android-native tool discovery and dispatch. Apps expose tools via manifest
+`<receiver>` + `<meta-data>`. JarvisOS scans on install, embeds descriptions, routes
+queries to the right app via broadcast.
 
-#### Problem
-FunctionGemma (270M) cannot reason over 240+ tools (60 apps × 4 tools). Must filter to top-k before any model sees them.
+**Done:**
+- `AppRecord.java` — ObjectBox entity, one per app. `ToMany<ToolRecord>`.
+- `ToolRecord.java` — ObjectBox entity, one per tool. `ToOne<AppRecord>`. `rawDefinition`
+  field (toolName + description + params) is what gets embedded.
+- `ToolScannerService.java` — scans all installed packages on boot + listens for
+  `ACTION_PACKAGE_ADDED/REMOVED/REPLACED`. Upserts AppRecord + ToolRecord. Embeds
+  `rawDefinition` into "tools" Cactus index.
+- `ToolDispatcher.java` — semantic search (embed query → HNSW → top-5 ToolRecords) →
+  metadata fallback → builds OpenAI-compatible toolsJson → CactusWrapper.complete()
+  selects tool → broadcast to app receiver → ResultReceiver + CountDownLatch (10s timeout).
+- `RagService.java` — ToolDispatcher instantiated. processQuery() runs tool path first,
+  falls through to RAG if resolveAndDispatch() returns null.
+- `ToolDefinition.java` — tombstoned.
 
-#### Two-layer discovery model
+**Still needed:**
+- `IToolRegistry.aidl` — public API: `listTools()`, `searchTools(query)`, `getTool(id)`
+- Wire `AppRecord_` + `ToolRecord_` ObjectBox query classes into `Android.bp`
+- Delete `ToolDefinition.java` tombstone
+- Commit + push
 
-**Layer 1 — First-party / curated (no app cooperation needed)**
-JarvisOS ships built-in tool definitions for major apps (WhatsApp, Gmail, Google Maps etc.) stored in `vendor/jarvisos/tools/<packageName>.json`. `ToolScanner` loads these at boot. No manifest changes needed from app developers.
+### 📅 Phase 5 — Agentic Loop
+See `AGENTIC_LOOP.md`. JarvisExecutor state machine inspired by LangGraph + Claude Code
+leak patterns. AgentSession (ObjectBox), RouterNode (deterministic), nodes: Plan →
+Retrieve → Tool → Respond. Max 5 turns. RetrieveNode calls RagService via Binder.
+ToolNode calls ToolDispatcher. Requires Phase 4 complete first.
 
-**Layer 2 — Third-party / declared (apps that want native support)**
-Apps declare tools via Android's standard `<meta-data>` tag inside `AndroidManifest.xml`. This is a proven pattern used by Firebase, Crashlytics, AdMob — guaranteed available after install via `PackageManager.GET_META_DATA`.
-
-Convention: one `<meta-data>` entry per tool, value is a JSON blob:
-```xml
-<meta-data
-    android:name="ai.jarvisos.tool.send_message"
-    android:value='{"name":"send_message","description":"Sends a WhatsApp message","params":["recipient","message"]}'/>
-```
-`ToolScanner` iterates all installed packages, reads `metaData` bundle, collects any key matching `ai.jarvisos.tool.*`.
-
-**Open question — naming convention:** `ai.jarvisos.tool.*` prefix requires app developers to know they're building for JarvisOS. A more generic protocol (e.g. a dedicated `res/xml/jarvis_tools.xml` file inside the APK, or a `JarvisToolProvider` ContentProvider) would allow adoption without OS-specific naming. Not yet decided — needs design session with Sam.
-
-#### ObjectBox schema (tool registry IS ObjectBox — no SQLite)
-
-```java
-@Entity
-public class RegisteredApp {
-    @Id long id;
-    String packageName;      // com.whatsapp
-    String appLabel;         // WhatsApp
-    String sourceType;       // "curated" | "declared"
-    long lastScanTime;
-    boolean isActive;        // false = uninstalled
-}
-
-@Entity
-public class RegisteredTool {
-    @Id long id;
-    String toolName;         // send_message
-    String description;      // full natural language description
-    String paramsJson;       // ["recipient", "message"]
-    String rawDefinition;    // full string used for embedding
-    @HnswIndex(dimensions = 1024)
-    float[] embedding;       // semantic vector for top-k filtering
-    ToOne<RegisteredApp> app; // FK → which app owns this tool
-}
-```
-
-#### Query-time tool filtering
-1. Embed user query via Cactus
-2. HNSW search on `RegisteredTool.embedding` → top-k tools (e.g. 5–10)
-3. Each result carries `ToOne<RegisteredApp>` — knows which app, which tool
-4. Format top-k as JSON function definitions → inject into Cactus completion call
-5. FunctionGemma selects one → `ToolDispatcher` fires the appropriate Intent/ContentProvider call
-
-#### Tool lifecycle
-- **Install:** `ToolScanner` reads meta-data, embeds definitions, persists `RegisteredApp` + `RegisteredTool` to ObjectBox
-- **Update:** Delete old `RegisteredTool` entries for that package, re-scan, re-embed
-- **Uninstall:** Delete all `RegisteredTool` where `app.packageName == uninstalledPackage`, delete `RegisteredApp`
-
-#### Files
-```
-frameworks/base/services/core/java/com/android/server/rag/tools/
-    ToolScanner.java       — install/update/delete lifecycle, meta-data reader
-    ToolDispatcher.java    — receives FunctionGemma output, resolves + fires Intent
-    IToolRegistry.aidl     — public API: listTools(), getTool(id), executeTool(id, argsJson)
-vendor/jarvisos/tools/
-    com.whatsapp.json      — curated first-party tool definitions
-    com.google.android.gm.json
-    com.google.android.apps.maps.json
-```
-
-#### Separate Cactus index for tools
-Tool embeddings use a separate `(modelHandle, indexHandle)` pair from RAG document embeddings. Same model (Qwen/nomic) but separate index directory — `/data/system/jarvis/index_tools/`. Indexes must never be mixed.
-
-#### Tool Registry — ObjectBox schema
-Two entities. `AppRecord` is the umbrella per installed app. `ToolRecord` is one tool, linked to its app via `ToOne<AppRecord>`.
-
-```java
-@Entity
-public class AppRecord {
-    @Id long id;
-    String packageName;   // com.borderless.app
-    String appLabel;      // Borderless
-    long lastScanTime;
-    boolean isActive;     // false if uninstalled
-}
-
-@Entity
-public class ToolRecord {
-    @Id long id;
-    String toolName;       // find_lawyer
-    String description;    // "Finds immigration lawyers near a location"
-    String paramsJson;     // ["location", "specialty"]
-    String rawDefinition;  // full string used for embedding
-    @HnswIndex(dimensions = 1024)
-    float[] embedding;     // semantic search vector
-    ToOne<AppRecord> app;  // FK → owning app
-}
-```
-
-**Query flow:** embed user query → HNSW search on `ToolRecord.embedding` → top-k results carry `ToOne<AppRecord>` so Jarvis knows exactly which app owns each tool → format + inject into Cactus context.
-
-**Lifecycle:**
-- Install → `tool_scanner` scans manifest meta-data, creates `AppRecord` + `ToolRecord` entries, embeds each tool definition
-- Update → delete old `ToolRecord` entries for that package, re-scan, re-embed
-- Uninstall → delete all `ToolRecord` where `app.packageName == uninstalledPackage`, delete `AppRecord`
-
-#### Tool discovery protocol — open design problem
-How third-party apps declare tools is unresolved. Two confirmed approaches:
-
-**Layer 1 — First party / curated (no app cooperation needed)**
-Jarvis ships built-in tool definitions for major apps (WhatsApp, Gmail, Google Maps etc.) in `vendor/jarvisos`. Based on existing intents and Content Providers. Works immediately, no developer action required.
-
-**Layer 2 — Third party / declared (app opts in)**
-`<meta-data>` in `AndroidManifest.xml` is the confirmed Android-native mechanism — used by Crashlytics, Google AdMob, Firebase. PackageManager exposes it via `getApplicationInfo(pkg, GET_META_DATA).metaData` after install. Guaranteed available.
-
-The open question is **naming convention** — apps have different package prefixes so `tool_scanner` can't filter by prefix. Options under consideration:
-- Fixed keyword in meta-data name: `android:name="com.whatsapp.jarvis_tool.send_message"` → scanner filters for `jarvis_tool.` substring
-- Fixed Jarvis key, structured JSON value: `android:name="android.tool.provider"` with JSON blob as value
-- Dedicated `res/xml/jarvis_tools.xml` file inside APK, referenced via single meta-data line
-- `JarvisToolProvider` Content Provider — richer, more dynamic, standard Android pattern
-
-**Not decided yet.** Needs protocol spec before Phase 4 implementation. Discuss with Sam.
-
-**Key constraint:** The model that indexed the tool embeddings must be the model that queries them. Embeddings from different models are not cross-comparable — enforced by `(modelHandle, indexHandle)` pairing.
-
-### Phase 5 — Voice + Context Switching
-- Wake word detection
-- Audio capture at system level
-- TTS response
-- Quiz mode, interview sim, study mode
-
----
-
-## MD Maintenance Protocol
-
-At the **end of every session**, Claude must:
-1. Update AGENTS.md — file map, phase status, session log
-2. Rewrite HANDOFF.md — completed + next sections only (don't append)
-3. Update PROGRESS.md — if learning happened
-4. Check for `CHECKPOINT.md` — if exists, merge into AGENTS.md then delete it
-
-**Size discipline:** AGENTS.md = architecture only. HANDOFF.md = current session only. Never let MDs grow into logs.
+### 📅 Phase 6 — Memory Consolidation
+DreamWorker — nightly WorkManager job. Merges AgentTurn history into UserContext facts.
+Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
 
 ---
 
 ## Key Principles
 
-1. **Build reusable features in `lib/` as package code, not example-specific.** Only UI goes in `example/lib`. Extend Cactus, don't reinvent it.
-2. **Small models = zero-shot only.** No system prompt injection for sub-1B models.
-3. **Deterministic post-processing > keyword routing.**
-4. **Semantic chunking > naive splitting.** Sliding window similarity detection.
-5. **Embeddings at send-time, not upload-time.**
-6. **JarvisOS owns the memory layer. Cactus owns inference.**
-7. **Follow Android's security model.** Public APIs separate from privileged system services.
-8. **We manage our own indexes — not Cactus's corpus_dir.** Cactus's built-in RAG is static, single-model, app-level. JarvisOS needs dynamic, multi-model, OS-level. We use Cactus primitives (`indexInit`, `indexAdd`, `indexQuery`, `embed`) and build our own orchestration on top.
-9. **Multiple models = multiple handle pairs.** Each model gets its own `(modelHandle, indexHandle)` and its own index directory on disk. Indexes are not shared across models — embedding dimensions must match. Current: one pair (Qwen, conversations). Phase 4 adds a second pair (tools).
-10. **`CactusWrapper.java` is the abstraction boundary.** If Cactus ever needs to be swapped, only that file and the JNI layer changes. ObjectBox schema, RagService pipeline, and FileObserver are unaffected.
-11. **Audio models are preprocessing, not retrieval.** Whisper/Moonshine produce transcripts, not stored embeddings. Flow: audio → Whisper → text → Qwen embed → index_conversations.
-12. **Model Registry pattern (Phase 4 prerequisite).** Before adding a second model, replace static handles in `RagIndexWorker` with a named map: `{ name → (modelHandle, indexHandle, dim, indexDir) }`. Adding a new model then becomes a config entry, not a code change.
+1. `CactusWrapper` is the only entry point to Cactus — never call native from elsewhere
+2. No Cactus `corpus_dir` — use primitives: `indexInit`, `indexAdd`, `indexQuery`, `embed`
+3. "rag" and "tools" indexes are NEVER mixed — separate dirs, separate handle pairs
+4. No Kotlin in system_server
+5. Small models (~270M) = zero-shot only — no system prompt injection
+6. Audio models produce transcripts only — not stored embeddings
+7. ObjectBox owns metadata. Cactus owns vectors.
+8. ToolDispatcher.resolveAndDispatch() returns null on no match — caller falls through to RAG
+9. Public APIs only in `frameworks/base/core/` — not in services
 
 ---
 
-## Known Gaps / Future Work
+## Known Gaps
 
 | Item | Notes |
 |------|-------|
-| MetadataSearch semantic fallback | If ObjectBox returns zero candidates (e.g. file named `BU_exam_results_2024.pdf` with no tags, query asks about "biology test") — no cactusIndexIds are passed to Cactus, result is empty. Fix: if MetadataSearch confidence below threshold, fall back to full Cactus vector scan. Expensive but only triggered when cheap path fails. Pattern: `MetadataSearch → candidates? → yes: precision retrieval / no: full scan fallback`. Phase 3 item. |
-| GraphRAG not yet implemented | Current architecture is two-stage retrieval (ObjectBox metadata + Cactus precision vector search) — an optimisation on top of traditional RAG, not GraphRAG. GraphRAG requires: entity extraction at index time, relationship mapping between entities, graph storage (nodes + edges), and multi-hop traversal at query time. ObjectBox already has partial scaffolding (TaskMemory, Folder relationships) but extraction and traversal logic is missing. The GraphRAG diagram in the presentation should be framed as "where we're headed" not "what we built". Note: embeddings from different models are not cross-comparable — each model must query only the index it created. This is already enforced by the (modelHandle, indexHandle) pairing. Phase 4/5 item — discuss with Sam. |
-
----
-
-## Milestones
-
-| Milestone | Status |
-|-----------|--------|
-| LineageOS source setup | ✅ Done |
-| Vendor overlay init | ✅ Done |
-| AIDL interfaces + system service registration | ✅ Done |
-| Phase 1 RAG service architecture | ✅ Done |
-| Cactus fork + JarvisOS JNI bindings | ✅ Done |
-| Android.bp for libcactus | ✅ Done |
-| ObjectBox store initialized | 🔄 Next |
-| m libcactus clean compile | 🔄 Next |
-| End-to-end indexing pipeline | 📅 Planned |
-| March 2025 presentation | 🎯 Target |
+| MetadataSearch semantic fallback | Zero ObjectBox candidates → Cactus never called. Fix: full vector scan fallback when Stage 1 confidence below threshold. Phase 4 item. |
+| AppRecord_ / ToolRecord_ not in Android.bp | ObjectBox annotation processor generates these. Build will fail without them. Phase 4 next task. |
+| IToolRegistry.aidl missing | Apps can't query tool registry yet. Phase 4 next task. |
+| ToolDefinition.java tombstone | Still on disk. Delete after confirming no references. |
+| Curated tools not loaded | vendor/jarvisos/tools/*.json not yet read by ToolScannerService. |
+| No re-embed on Cactus unavailable at install | Tools stored without embedding if Cactus not ready. No retry on next boot yet. |
+| GraphRAG not implemented | Entity extraction, relationship mapping, graph traversal — Phase 5/6 item. |
+| lineage-22.2 re-sync pending | Target device (Nothing Phone 2 / Pong) requires lineage-22.2+. Do at uni. |
 
 ---
 
@@ -377,8 +244,10 @@ At the **end of every session**, Claude must:
 | Hackathon | Won 2nd place Google DeepMind x Cactus — tool calling optimization, semantic chunking |
 | Feb 2026 | dev.talk speaker slot confirmed |
 | Mar 2026 session 1 | Reconnected, filesystem access established, AGENTS.md created, Phase 1 scoped |
-| Mar 2026 session 2 | Phase 1 complete — RagService, FileObserver, IndexQueue, RagIndexWorker, TextExtractor, MetadataSearch, CactusWrapper, ObjectBox entities all implemented and committed |
-| Mar 2026 session 3 | Cactus fork explored — existing JNI layer discovered, JarvisOS bindings added to cactus_jni.cpp, Android.bp written, jarvisos.mk created, all vendor repos locked to JarvisOs/main |
-| Mar 2026 session 4 | Git emergency — all commits were on lineage-21.0 pointing at LineageOS upstream instead of fork. Cherry-picked all 5 commits onto lineage-23.0, resolved Android.bp + RagService.java conflicts, pushed to origin. Fixed conflict markers left in RagService.java, removed stale AndroidObjectBrowser import from JarvisStore.java, corrected LineageOS version in AGENTS.md. Branch tracking now correct. |
-| Mar 2026 session 5 | Phase 2 complete — Chunk.java fixed, ChunkingStrategy implemented, MetadataSearch all 6 ObjectBox passes wired, RagIndexWorker full pipeline implemented, RagManager + IRagService package fixed to android.app.rag, isIndexed() added across full Binder stack. AGENTS.md updated. Handoff note written for next Claude session. |
-| Mar 2026 session 6 | Presentation work + protocol design. Memory slides: two-slide structure agreed (GraphRAG as "where we're headed", JarvisOS two-stage retrieval as current implementation). HNSW clarification — ObjectBox runs no LLM inference, uses HNSW graph index for ANN search. MetadataSearch semantic fallback gap identified and added to Known Gaps. GraphRAG not yet implemented — added to Known Gaps. Tool Registry design: reviewed Sam's protocol doc, confirmed ObjectBox over SQLite, `<meta-data>` confirmed as Android-native mechanism (used by Crashlytics/AdMob/Firebase). AppRecord + ToolRecord ObjectBox schema designed. Tool discovery protocol (naming convention for third-party app declarations) is open design problem — not decided, needs spec before Phase 4. Borderless and InventoryTracker used as concrete examples throughout. |
+| Mar 2026 session 2 | Phase 1 complete — RagService, FileObserver, IndexQueue, RagIndexWorker, TextExtractor, MetadataSearch, CactusWrapper, ObjectBox entities |
+| Mar 2026 session 3 | Cactus fork explored — JarvisOS JNI bindings added, Android.bp written, jarvisos.mk created |
+| Mar 2026 session 4 | Git emergency — cherry-picked commits onto correct branch, resolved conflicts, pushed |
+| Mar 2026 session 5 | Phase 2 complete — full RAG pipeline, RagManager, IRagService fixed |
+| Mar 2026 session 6 | Presentation work + protocol design. Tool Registry ObjectBox schema designed. |
+| Mar 2026 session 7 | Phase 3 complete — ModelRegistry.java, RagIndexWorker updated, RagService wired. lineage-22.2 re-sync decision made. |
+| Apr 2026 session 8 | Phase 4 in progress — AppRecord, ToolRecord, ToolScannerService rewritten, ToolDispatcher written, RagService updated. All MDs migrated to vendor/jarvisos. CLAUDE.md created for Claude Code remote. AGENTIC_LOOP.md written. Dispatch + Claude Code remote workflow established. |
