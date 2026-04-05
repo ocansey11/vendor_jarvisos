@@ -1,83 +1,65 @@
-# JarvisOS Handoff — Session 8 (Apr 4 2026)
+# JarvisOS Handoff — Session 8 (Apr 2026)
 
-## Build environment note
+## Code state — ALL CLEAN AND PUSHED
 
-lineage-22.2 re-sync still pending — do at uni on fast connection.
-Decision: code Phase 4 now, rebase on 22.2 after. Same pattern as the 23→21 migration.
-All Phase 4 code is pure Java in frameworks/base — no device-specific dependencies.
-
----
-
-## Code state — ALL SAFE, READY TO PUSH
-
-| Repo | Branch | Status |
-|------|--------|--------|
-| frameworks/base | lineage-21.0 | ✅ Phase 4 tools written, needs push |
-| vendor/jarvisos | main | ✅ MDs pushed (docs session) |
-| vendor/cactus | main | ✅ clean |
+| Repo | Branch | Commit | Status |
+|------|--------|--------|--------|
+| frameworks/base | lineage-21.0 | 671424dbc722 | ✅ Phase 4 complete |
+| vendor/jarvisos | main | 3670dd8 | ✅ All MDs current |
+| vendor/cactus | main | — | ✅ clean |
 
 ---
 
-## What was done this session (Session 8)
+## Phase 4 — Tool Registry — COMPLETE
 
-### MD cleanup
-- `pixel6.xml` + `roomservice.xml` — commented out (leftover manifests)
-- `pong.xml` — updated with commented-out Pong entry + instructions
-- Migrated all MDs from `~/vendor_jarvisos/` → `vendor/jarvisos/` (single source of truth)
-- Added `AGENTIC_LOOP.md` — full Phase 5 architecture spec
-- `.gitignore` updated to track MDs — pushed so Sam can read them
+### What was done this session
 
-### Phase 4 — Tool Registry (IN PROGRESS)
+**By Claude Chat (phone):**
+- AppRecord.java — ObjectBox entity, one per installed app, ToMany<ToolRecord>
+- ToolRecord.java — ObjectBox entity, one per tool, ToOne<AppRecord>, rawDefinition field
+- ToolScannerService.java — rewritten, correct package, uses new two-entity schema
+- ToolDispatcher.java — semantic search → model selection → broadcast dispatch → ResultReceiver + CountDownLatch (10s)
+- RagService.java — ToolDispatcher wired in, tool path runs before RAG path
+- ToolDefinition.java — tombstoned
+- All MDs migrated to vendor/jarvisos (single source of truth)
+- AGENTIC_LOOP.md written — Phase 5 architecture spec
+- CLAUDE.md created in vendor/jarvisos — works for Claude Code remote + local WSL
 
-#### Files written
-- `tools/AppRecord.java` — NEW. One ObjectBox entity per installed app.
-  `ToMany<ToolRecord>` relation. Fields: packageName, appLabel, sourceType, lastScanTime, isActive.
-- `tools/ToolRecord.java` — NEW. One ObjectBox entity per tool.
-  Replaces flat ToolDefinition. Has `ToOne<AppRecord>` back-link, `rawDefinition` field
-  (tool name + description + params — the string that gets embedded).
-  `cactusIndexId` points into Cactus binary index.
-- `tools/ToolScannerService.java` — REWRITTEN.
-  Package fixed: `com.android.server.rag` → `com.android.server.rag.tools`.
-  Now uses AppRecord + ToolRecord split.
-  `buildRawDefinition()` constructs richer embedding string.
-  `resolveAppLabel()` pulls human-readable app name from PackageManager.
-- `tools/ToolDispatcher.java` — NEW. Resolves + executes tools.
-  Semantic search (embed query → HNSW on ToolRecord) → metadata fallback.
-  Builds OpenAI-compatible toolsJson → CactusWrapper.complete() selects tool.
-  Fires broadcast Intent to app's BroadcastReceiver.
-  ResultReceiver + CountDownLatch pattern — blocking, 10s timeout.
-- `tools/ToolDefinition.java` — TOMBSTONED. Replaced by AppRecord + ToolRecord.
-- `RagService.java` — UPDATED. Added ToolDispatcher field + instantiation.
-  processQuery() now tries tool path first (returns null = no match → falls through to RAG).
+**By Claude Code remote (+ Copilot review):**
+- IToolRegistry.aidl — created at `core/java/android/rag/IToolRegistry.aidl`
+  Published as service "jarvis_tools". Methods: listTools(), getTool(id), searchTools(query)
+- Android.bp — wired in all subpackage sources (core, inference, indexing, search, tools, model)
+- RagService.java — wired IToolRegistry Binder, publishBinderService("jarvis_tools")
+- ToolDispatcher.java — Copilot review comments addressed
+- ToolDefinition.java — deleted (tombstone removed)
 
-#### Key architectural decision
-AppRecord/ToolRecord two-entity split chosen over flat ToolDefinition because:
-- Phase 5 ToolNode needs to know which *app* owns a matched tool for dispatch
-- `ToOne<AppRecord>` gives ToolDispatcher the packageName + receiverClass cleanly
-- Matches AGENTS.md spec exactly
+### Android.bp note
+ObjectBox annotation processor (AppRecord_, ToolRecord_ etc.) not yet wired as
+java_plugin — comment left in Android.bp explaining what's needed. Build will
+need the processor JAR in vendor/jarvisos/prebuilts/objectbox/ before it can
+generate query classes. This is the next build-time task.
 
 ---
 
-## Next — complete Phase 4
+## Next — Phase 5 setup
 
-- [ ] `IToolRegistry.aidl` — public AIDL: `listTools()`, `getTool(id)`, `searchTools(query)`
-- [ ] Wire `IToolRegistry` into `IRagService` or as a separate published service
-- [ ] Add AppRecord_ + ToolRecord_ generated ObjectBox query classes to Android.bp
-- [ ] Delete `ToolDefinition.java` tombstone (after confirming no references remain)
-- [ ] Commit + push frameworks/base
-
-## After Phase 4 is complete
-- lineage-22.2 re-sync at uni
-- Rebase frameworks/base lineage-21.0 branch onto lineage-22.2
-- Phase 5: JarvisExecutor agentic loop (see AGENTIC_LOOP.md)
+- [ ] lineage-22.2 re-sync at uni (fast connection, ~3hrs, run in tmux)
+- [ ] Rebase frameworks/base lineage-21.0 → lineage-22.2
+- [ ] Wire ObjectBox annotation processor into Android.bp
+- [ ] Begin Phase 5: JarvisExecutor agentic loop (see AGENTIC_LOOP.md)
+  - AgentSession.java + AgentTurn.java — ObjectBox entities
+  - RouterNode.java — deterministic routing
+  - JarvisExecutor.java — the loop itself
+  - Lives in rag/agent/ subfolder
 
 ---
 
-## Key facts to remember
+## Key facts
 
-- ToolDispatcher.resolveAndDispatch() returns null if no tool matches — RagService falls through to RAG path
-- Tool broadcast timeout: 10 seconds (DISPATCH_TIMEOUT_MS)
-- rawDefinition = toolName (spaces) + description + paramsJson — richer than description alone
-- "rag" and "tools" model handles both point to the same .gguf file, separate index dirs
+- IToolRegistry published as "jarvis_tools" — separate from "rag" service
+- ToolDispatcher.resolveAndDispatch() returns null on no match — falls through to RAG
+- Tool broadcast timeout: 10 seconds
+- "rag" and "tools" indexes use separate dirs — never mixed
 - No Kotlin in system_server
-- ToolDefinition.java is a tombstone — do not reference it
+- lineage-22.2 re-sync is the blocker before any device testing
+- Claude Code remote workflow confirmed working — Dispatch + GitHub is the setup
