@@ -218,9 +218,21 @@ JarvisExecutor state machine. LangGraph-validated design, Claude Code leak patte
 **Max turns:** 5 hard ceiling. KV cache growth and mobile thermal throttling make this non-negotiable.
 **Gemma 4 prerequisite (Sam):** pull upstream llama.cpp into Cactus, confirm `<|tool_call|>` output works.
 
-### 📅 Phase 6 — Memory Consolidation
-DreamWorker — nightly WorkManager job. Merges AgentTurn history into UserContext facts.
-Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
+### ✅ Phase 6 — Memory Consolidation + Multimodal + Sub-agents
+
+**Done:**
+- `agent/DreamWorker.java` — nightly WorkManager (24h, charging only). Reads DONE+unconsolidated
+  AgentSessions, extracts user facts via model, merges into `UserContext.facts` (cap 50).
+  Inspired by KAIROS autoDream (Claude Code internal architecture).
+- `agent/SubAgentExecutor.java` — child loop for sub-tasks. maxTurns=2, inherits parent
+  accumulatedContext, linked via parent session tag.
+- `IJarvisService.aidl` — `processQueryWithImage()` + `processQueryWithAudio()` added
+- `JarvisService` implements both (text fallback until Sam's Cactus Gemma 4 pull)
+- `JarvisManager` — `queryWithImage()` + `queryWithAudio()` public wrappers for apps
+- `AgentSession` — `consolidated` flag added (DreamWorker gate)
+- `UserContext` — `facts` (JSON array, cap 50) + `consolidatedAt` fields added
+
+**Blocked on Sam:** multimodal methods fall back to text until Gemma 4 is in Cactus.
 
 ---
 
@@ -269,3 +281,4 @@ Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
 | Apr 2026 session 9 | Package rename: com.android.server.rag → com.android.server.jarvis. All 27 server-side files written to new jarvis/ folder. HANDOFF + AGENTS updated. Layer 2 (android/rag/ → android/jarvis/) and git rm of old folder left for Claude Code. Claude Code installed in WSL. |
 | Apr 2026 session 10 | Removed old rag/ folders (server/rag, android/rag). Layer 2 public API now clean at android/jarvis/. CLAUDE.md, AGENTS.md, HANDOFF.md, TASK_1.md updated to reference jarvis package only. |
 | Apr 2026 session 11 | Cactus JNI bindings fixed (10 methods still referenced com.android.server.rag — UnsatisfiedLinkError blocker). Phase 5 complete: JarvisExecutor, 5 nodes, AgentSession/AgentTurn entities, ToolDispatcher.dispatchByName(). Pushed to both repos. |
+| Apr 2026 session 11 (cont.) | Phase 6 complete: DreamWorker, SubAgentExecutor, multimodal AIDL stubs (processQueryWithImage/Audio), JarvisManager wrappers. UserContext.facts + consolidated flag added. |
