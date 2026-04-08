@@ -50,7 +50,7 @@ User / App
     |
     | AIDL (Binder IPC)
     v
-RagService.java  (com.android.server.rag)
+RagService.java  (com.android.server.jarvis)
     |
     +-- ToolDispatcher          tool path (runs first on every query)
     |       |
@@ -100,13 +100,14 @@ RagService.java  (com.android.server.rag)
 
 ## File Map
 
-All service code in `frameworks/base/services/core/java/com/android/server/rag/`:
+Server service code in `frameworks/base/services/core/java/com/android/server/jarvis/`:
+Public API layer in `frameworks/base/core/java/android/jarvis/`:
 
 ```
-rag/
+jarvis/                              ← renamed from rag/ this session
 ├── RagService.java              ✅ System service entry point
-├── IRagService.aidl             ✅ Binder interface (android.app.rag package)
-├── Android.bp                   ✅ Build config
+├── IRagService.aidl             ✅ Binder interface (server-side copy)
+├── Android.bp                   ✅ Build config — library: services.jarvis
 │
 ├── core/
 │   ├── JarvisStore.java         ✅ ObjectBox singleton
@@ -138,13 +139,17 @@ rag/
 │   ├── AccessLog.java
 │   └── TaskMemory.java
 │
-└── tools/                       🔄 Phase 4 — Tool Registry
+└── tools/                       ✅ Phase 4 — Tool Registry
     ├── AppRecord.java           ✅ ObjectBox: one per installed app
     ├── ToolRecord.java          ✅ ObjectBox: one per tool, ToOne<AppRecord>
     ├── ToolScannerService.java  ✅ Scans APKs on install, embeds tools
-    ├── ToolDispatcher.java      ✅ Resolves + fires tools via broadcast
-    ├── ToolDefinition.java      ❌ TOMBSTONE — do not reference
-    └── IToolRegistry.aidl       📅 TODO — public API for tool registry
+    └── ToolDispatcher.java      ✅ Resolves + fires tools via broadcast
+
+android/jarvis/                      ← public API layer ✅
+├── IRagService.aidl             ✅ package android.jarvis
+├── IToolRegistry.aidl           ✅ package android.jarvis
+├── RagManager.java              ✅ package android.jarvis
+└── RagException.java            ✅ package android.jarvis
 ```
 
 ---
@@ -170,7 +175,7 @@ Two entries registered at boot: "rag" (documents) and "tools" (tool embeddings).
 Same model file, separate index directories — indexes never mixed.
 RagIndexWorker updated to use ModelRegistry.getReady("rag") per task.
 
-### 🔄 Phase 4 — Tool Registry
+### ✅ Phase 4 — Tool Registry
 **Goal:** Android-native tool discovery and dispatch. Apps expose tools via manifest
 `<receiver>` + `<meta-data>`. JarvisOS scans on install, embeds descriptions, routes
 queries to the right app via broadcast.
@@ -189,11 +194,10 @@ queries to the right app via broadcast.
   falls through to RAG if resolveAndDispatch() returns null.
 - `ToolDefinition.java` — tombstoned.
 
-**Still needed:**
-- `IToolRegistry.aidl` — public API: `listTools()`, `searchTools(query)`, `getTool(id)`
-- Wire `AppRecord_` + `ToolRecord_` ObjectBox query classes into `Android.bp`
-- Delete `ToolDefinition.java` tombstone
-- Commit + push
+**Phase 4 complete.** ObjectBox _ stubs written (AppRecord_, ToolRecord_,
+SourceFile_, Folder_, AccessLog_, TaskMemory_) + MyObjectBox stub. Committed
+as `31f59143`. getCursorFactory() stubs throw — replace with processor-generated
+versions when objectbox-generator deps land in prebuilts (see Android.bp TODO).
 
 ### 📅 Phase 5 — Agentic Loop
 See `AGENTIC_LOOP.md`. JarvisExecutor state machine inspired by LangGraph + Claude Code
@@ -226,9 +230,7 @@ Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
 | Item | Notes |
 |------|-------|
 | MetadataSearch semantic fallback | Zero ObjectBox candidates → Cactus never called. Fix: full vector scan fallback when Stage 1 confidence below threshold. Phase 4 item. |
-| AppRecord_ / ToolRecord_ not in Android.bp | ObjectBox annotation processor generates these. Build will fail without them. Phase 4 next task. |
-| IToolRegistry.aidl missing | Apps can't query tool registry yet. Phase 4 next task. |
-| ToolDefinition.java tombstone | Still on disk. Delete after confirming no references. |
+| AppRecord_ / ToolRecord_ not in Android.bp | ObjectBox annotation processor generates these. Build will fail without them. Next task. |
 | Curated tools not loaded | vendor/jarvisos/tools/*.json not yet read by ToolScannerService. |
 | No re-embed on Cactus unavailable at install | Tools stored without embedding if Cactus not ready. No retry on next boot yet. |
 | GraphRAG not implemented | Entity extraction, relationship mapping, graph traversal — Phase 5/6 item. |
@@ -251,3 +253,5 @@ Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
 | Mar 2026 session 6 | Presentation work + protocol design. Tool Registry ObjectBox schema designed. |
 | Mar 2026 session 7 | Phase 3 complete — ModelRegistry.java, RagIndexWorker updated, RagService wired. lineage-22.2 re-sync decision made. |
 | Apr 2026 session 8 | Phase 4 in progress — AppRecord, ToolRecord, ToolScannerService rewritten, ToolDispatcher written, RagService updated. All MDs migrated to vendor/jarvisos. CLAUDE.md created for Claude Code remote. AGENTIC_LOOP.md written. Dispatch + Claude Code remote workflow established. |
+| Apr 2026 session 9 | Package rename: com.android.server.rag → com.android.server.jarvis. All 27 server-side files written to new jarvis/ folder. HANDOFF + AGENTS updated. Layer 2 (android/rag/ → android/jarvis/) and git rm of old folder left for Claude Code. Claude Code installed in WSL. |
+| Apr 2026 session 10 | Removed old rag/ folders (server/rag, android/rag). Layer 2 public API now clean at android/jarvis/. CLAUDE.md, AGENTS.md, HANDOFF.md, TASK_1.md updated to reference jarvis package only. |

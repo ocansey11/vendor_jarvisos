@@ -1,65 +1,64 @@
-# JarvisOS Handoff — Session 8 (Apr 2026)
+# JarvisOS Handoff — Session 10 (Apr 2026)
 
-## Code state — ALL CLEAN AND PUSHED
+## Code state
 
-| Repo | Branch | Commit | Status |
-|------|--------|--------|--------|
-| frameworks/base | lineage-21.0 | 671424dbc722 | ✅ Phase 4 complete |
-| vendor/jarvisos | main | 3670dd8 | ✅ All MDs current |
-| vendor/cactus | main | — | ✅ clean |
-
----
-
-## Phase 4 — Tool Registry — COMPLETE
-
-### What was done this session
-
-**By Claude Chat (phone):**
-- AppRecord.java — ObjectBox entity, one per installed app, ToMany<ToolRecord>
-- ToolRecord.java — ObjectBox entity, one per tool, ToOne<AppRecord>, rawDefinition field
-- ToolScannerService.java — rewritten, correct package, uses new two-entity schema
-- ToolDispatcher.java — semantic search → model selection → broadcast dispatch → ResultReceiver + CountDownLatch (10s)
-- RagService.java — ToolDispatcher wired in, tool path runs before RAG path
-- ToolDefinition.java — tombstoned
-- All MDs migrated to vendor/jarvisos (single source of truth)
-- AGENTIC_LOOP.md written — Phase 5 architecture spec
-- CLAUDE.md created in vendor/jarvisos — works for Claude Code remote + local WSL
-
-**By Claude Code remote (+ Copilot review):**
-- IToolRegistry.aidl — created at `core/java/android/rag/IToolRegistry.aidl`
-  Published as service "jarvis_tools". Methods: listTools(), getTool(id), searchTools(query)
-- Android.bp — wired in all subpackage sources (core, inference, indexing, search, tools, model)
-- RagService.java — wired IToolRegistry Binder, publishBinderService("jarvis_tools")
-- ToolDispatcher.java — Copilot review comments addressed
-- ToolDefinition.java — deleted (tombstone removed)
-
-### Android.bp note
-ObjectBox annotation processor (AppRecord_, ToolRecord_ etc.) not yet wired as
-java_plugin — comment left in Android.bp explaining what's needed. Build will
-need the processor JAR in vendor/jarvisos/prebuilts/objectbox/ before it can
-generate query classes. This is the next build-time task.
+| Repo | Branch | Status |
+|------|--------|--------|
+| frameworks/base | lineage-21.0 | 🔄 Clean jarvis/ — not yet committed |
+| vendor/jarvisos | main | 🔄 MDs updated this session |
+| vendor/cactus | main | ✅ clean |
 
 ---
 
-## Next — Phase 5 setup
+## This session — rag/ removal + doc cleanup
 
-- [ ] lineage-22.2 re-sync at uni (fast connection, ~3hrs, run in tmux)
-- [ ] Rebase frameworks/base lineage-21.0 → lineage-22.2
-- [ ] Wire ObjectBox annotation processor into Android.bp
-- [ ] Begin Phase 5: JarvisExecutor agentic loop (see AGENTIC_LOOP.md)
-  - AgentSession.java + AgentTurn.java — ObjectBox entities
-  - RouterNode.java — deterministic routing
-  - JarvisExecutor.java — the loop itself
-  - Lives in rag/agent/ subfolder
+Deleted both old `rag/` folders. Package rename is now fully resolved on disk.
+Updated all MDs to reference `android.jarvis` / `com.android.server.jarvis` only.
+
+### What was done
+
+- Deleted `frameworks/base/services/core/java/com/android/server/rag/` (old server package)
+- Deleted `frameworks/base/core/java/android/rag/` (old public API package)
+- Updated `CLAUDE.md` layout — now shows `server/jarvis/` and `android/jarvis/` correctly
+- Updated `AGENTS.md` — Layer 2 marked ✅, Known Gaps cleaned, session log updated
+- Updated `TASK_1.md` — corrected package path, marked done (Phase 3 complete)
+
+### Current disk state (clean)
+
+```
+frameworks/base/core/java/android/jarvis/         ← public API (package android.jarvis)
+    IRagService.aidl, IToolRegistry.aidl, RagManager.java, RagException.java
+
+frameworks/base/services/core/java/com/android/server/jarvis/   ← system service
+    RagService.java, Android.bp, IRagService.aidl
+    core/, inference/, indexing/, search/, model/, tools/
+```
 
 ---
 
-## Key facts
+## What Claude Code must do next (in order)
 
-- IToolRegistry published as "jarvis_tools" — separate from "rag" service
+- [ ] **Wire ObjectBox annotation processor into Android.bp**
+  `AppRecord_`, `ToolRecord_`, `SourceFile_`, `DocumentChunk_` are generated classes.
+  Add `objectbox-processor` as a `java_plugin` once the JAR lands in
+  `vendor/jarvisos/prebuilts/objectbox/`.
+  Until then: document the build gap in Android.bp as a TODO comment.
+
+- [ ] **Add IToolRegistry.aidl wiring**
+  `RagService.java` publishes `"jarvis_tools"` via `ServiceManager.addService()`.
+  Verify the `IToolRegistry.aidl` stub is imported correctly in `RagService.java`.
+
+- [ ] **Commit**
+  Suggested message: `refactor: remove rag/ package, jarvis/ is now the only location`
+
+---
+
+## Key facts (carry forward)
+
+- Service name strings `"rag"` and `"jarvis_tools"` in RagService are runtime strings — unchanged
+- IToolRegistry published as `"jarvis_tools"` — separate from `"rag"` service
 - ToolDispatcher.resolveAndDispatch() returns null on no match — falls through to RAG
 - Tool broadcast timeout: 10 seconds
-- "rag" and "tools" indexes use separate dirs — never mixed
+- lineage-22.2 re-sync still pending (do at uni, fast connection, ~3hrs, run in tmux)
 - No Kotlin in system_server
-- lineage-22.2 re-sync is the blocker before any device testing
-- Claude Code remote workflow confirmed working — Dispatch + GitHub is the setup
+- x86_64 emulators cannot load Cactus — ARM hardware only for native testing

@@ -30,16 +30,23 @@ lineage/                                        ← BUILD ROOT (when running loc
 │   ├── AGENTS.md                               ← READ THIS FIRST
 │   ├── HANDOFF.md                              ← READ THIS SECOND
 │   ├── WORKFLOW.md                             ← READ THIS THIRD
+│   ├── ARCHITECTURE.md                         ← full service internals (for Sam / team)
 │   ├── TOOL_REGISTRY.md                        ← Phase 4 design spec
 │   ├── TOOL_DISPATCHER.md                      ← ToolDispatcher integration guide
 │   ├── MEMORY_SCHEMA.md                        ← ObjectBox entity design
 │   ├── AGENTIC_LOOP.md                         ← Phase 5 architecture
 │   └── RESEARCH_CALM_TURBOQUANT.md             ← future research
 │
-└── frameworks/base/services/core/java/com/android/server/rag/
+├── frameworks/base/core/java/android/jarvis/   ← public API layer
+│   ├── IRagService.aidl                        ← public Binder interface
+│   ├── IToolRegistry.aidl                      ← public tool registry interface
+│   ├── RagManager.java                         ← app-facing API
+│   └── RagException.java
+│
+└── frameworks/base/services/core/java/com/android/server/jarvis/
     ├── RagService.java                         ← system service entry point
-    ├── IRagService.aidl                        ← Binder interface
-    ├── Android.bp                              ← build config
+    ├── IRagService.aidl                        ← server-side Binder stub
+    ├── Android.bp                              ← build config (services.jarvis)
     │
     ├── core/
     │   ├── JarvisStore.java                    ← ObjectBox singleton
@@ -75,8 +82,7 @@ lineage/                                        ← BUILD ROOT (when running loc
         ├── AppRecord.java                      ← ObjectBox: one per installed app
         ├── ToolRecord.java                     ← ObjectBox: one per tool (ToOne<AppRecord>)
         ├── ToolScannerService.java             ← scans APKs on install, embeds tools
-        ├── ToolDispatcher.java                 ← resolves + fires tools
-        └── ToolDefinition.java                 ← TOMBSTONE — do not use
+        └── ToolDispatcher.java                 ← resolves + fires tools
 ```
 
 ---
