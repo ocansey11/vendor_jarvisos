@@ -12,17 +12,17 @@ JarvisOS code lives in two places in `frameworks/base/`:
 frameworks/base/
 │
 ├── core/java/android/jarvis/          ← PUBLIC API (what apps see)
-│   ├── IRagService.aidl               ← query interface: processQuery, indexDocument, isIndexed, isReady
+│   ├── IJarvisService.aidl               ← query interface: processQuery, indexDocument, isIndexed, isReady
 │   ├── IToolRegistry.aidl             ← tool interface: listTools, getTool, searchTools
-│   ├── RagManager.java                ← convenience wrapper around IRagService (like LocationManager)
-│   └── RagException.java             ← checked exception for API errors
+│   ├── JarvisManager.java                ← convenience wrapper around IJarvisService (like LocationManager)
+│   └── JarvisException.java             ← checked exception for API errors
 │
 └── services/core/java/com/android/server/jarvis/   ← SYSTEM SERVICE (privileged, inside system_server)
     └── (everything below)
 ```
 
-**Rule:** Apps never import from `server/jarvis/`. They bind to the service via `RagManager`
-which calls through `IRagService` / `IToolRegistry` Binder stubs. The service layer never
+**Rule:** Apps never import from `server/jarvis/`. They bind to the service via `JarvisManager`
+which calls through `IJarvisService` / `IToolRegistry` Binder stubs. The service layer never
 leaks its internal classes to callers.
 
 ---
@@ -32,28 +32,28 @@ leaks its internal classes to callers.
 ```
 com/android/server/jarvis/
 │
-├── RagService.java               ← THE ENTRY POINT — extends SystemService
+├── JarvisService.java               ← THE ENTRY POINT — extends SystemService
 │                                    registered in SystemServer.java at boot
 │                                    publishes two Binder endpoints:
-│                                      "rag"          → IRagService.Stub
+│                                      "jarvis"       → IJarvisService.Stub
 │                                      "jarvis_tools" → IToolRegistry.Stub
 │
-├── IRagService.aidl              ← server-side copy of the Binder stub
+├── IJarvisService.aidl              ← server-side copy of the Binder stub
 │
 ├── core/                         ← SHARED INFRASTRUCTURE (used by everything)
 │   ├── JarvisStore.java          ← ObjectBox singleton — one store, all entities
 │   ├── ModelRegistry.java        ← named (modelHandle, indexHandle) pairs for Cactus
 │   ├── IndexQueue.java           ← BlockingQueue<IndexTask> cap 500, singleton
-│   ├── RagManager.java           ← internal API manager
+│   ├── JarvisManager.java           ← internal API manager
 │   ├── MyObjectBox.java          ← ObjectBox store builder (hand-written stub)
-│   └── RagException.java
+│   └── JarvisException.java
 │
 ├── inference/
 │   └── CactusWrapper.java        ← THE ONLY DOOR TO CACTUS — all JNI calls go here
 │
 ├── indexing/                     ← PIPELINE: file → chunks → embeddings → ObjectBox
 │   ├── JarvisFileObserver.java   ← inotify watcher on Documents/ Downloads/ Pictures/
-│   ├── RagIndexWorker.java       ← WorkManager job — drains IndexQueue, embeds, persists
+│   ├── JarvisIndexWorker.java       ← WorkManager job — drains IndexQueue, embeds, persists
 │   ├── TextExtractor.java        ← file → raw text (.txt .md .csv .pdf .docx)
 │   └── ChunkingStrategy.java     ← text → sentence-boundary chunks with overlap
 │
@@ -89,12 +89,12 @@ com/android/server/jarvis/
 
 ## How the Subsystems Connect
 
-### Boot sequence (RagService.initializeAsync)
+### Boot sequence (JarvisService.initializeAsync)
 
 ```
-RagService.onStart()
+JarvisService.onStart()
     │
-    ├─ publishBinderService("rag", mBinder)            registers IRagService endpoint
+    ├─ publishBinderService("jarvis", mBinder)         registers IJarvisService endpoint
     ├─ publishBinderService("jarvis_tools", ...)       registers IToolRegistry endpoint
     │
     └─ initializeAsync() [background thread]
@@ -103,17 +103,17 @@ RagService.onStart()
            2. ModelRegistry.register("rag",   ...)     CactusWrapper.init() → modelHandle
               ModelRegistry.register("tools", ...)     CactusWrapper.indexInit() → indexHandle
            3. JarvisFileObserver.startWatching()       watches Documents/ Downloads/ Pictures/
-           4. RagIndexWorker.schedule()                WorkManager (15min, charging only)
+           4. JarvisIndexWorker.schedule()                WorkManager (15min, charging only)
            5. ToolScannerService.start()               scans installed packages, embeds tools
 ```
 
 ### Query path (what happens when an app calls processQuery)
 
 ```
-App → RagManager.processQuery(query)
+App → JarvisManager.processQuery(query)
         │  (Binder IPC across process boundary)
         ▼
-RagService.mBinder.processQuery(query)
+JarvisService.mBinder.processQuery(query)
         │
         ├─ [TOOL PATH]  ToolDispatcher.resolveAndDispatch(query)
         │                   │
@@ -144,7 +144,7 @@ New/changed file detected
 IndexQueue (BlockingQueue, cap 500)
         │  drained by
         ▼
-RagIndexWorker (WorkManager, 15min intervals, charging only)
+JarvisIndexWorker (WorkManager, 15min intervals, charging only)
         │
         ├─ TextExtractor.extract(file)           → raw text string
         ├─ ChunkingStrategy.chunk(text)          → List<String> chunks
@@ -232,7 +232,7 @@ replaced by processor-generated versions when `objectbox-generator` is wired up.
 
 ## The AIDL Interfaces — What Apps See
 
-### IRagService ("rag")
+### IJarvisService ("jarvis")
 ```
 processQuery(String query) → String      // full query → response (tool or RAG)
 indexDocument(String path) → void        // manually trigger indexing of a file
@@ -247,7 +247,7 @@ getTool(long id) → String                // JSON object for one tool by Object
 searchTools(String query) → String       // semantic search, returns JSON array
 ```
 
-Both endpoints are published by `RagService.onStart()` and share its lifecycle.
+Both endpoints are published by `JarvisService.onStart()` and share its lifecycle.
 
 ---
 
@@ -267,7 +267,7 @@ Both endpoints are published by `RagService.onStart()` and share its lifecycle.
 ## What Phase 5 Adds
 
 Phase 5 (Agentic Loop) sits on top of everything above without modifying it.
-`JarvisExecutor` will call `RagService` via Binder for retrieval and
+`JarvisExecutor` will call `JarvisService` via Binder for retrieval and
 `ToolDispatcher` for tool dispatch — no coupling into RAG internals.
 New entities (`AgentSession`, `AgentTurn`) join the same ObjectBox store.
 

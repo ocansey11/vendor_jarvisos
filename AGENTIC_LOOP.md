@@ -170,7 +170,7 @@ This is the answer to your second question — no more files dumped into `rag/`.
 ```
 frameworks/base/services/core/java/com/android/server/
     rag/                          ← existing, Phase 1-4 files stay here
-        RagService.java
+        JarvisService.java
         CactusWrapper.java
         MetadataSearch.java
         ... (all current files)
@@ -193,7 +193,7 @@ frameworks/base/services/core/java/com/android/server/
 ```
 
 The `rag/` package remains unchanged. `jarvis/agent/` sits on top of it.
-`RetrieveNode` calls `RagService` via the existing Binder interface — no coupling into RAG internals.
+`RetrieveNode` calls `JarvisService` via the existing Binder interface — no coupling into RAG internals.
 
 ---
 
@@ -219,7 +219,7 @@ The DreamWorker / memory consolidation is Phase 6 territory — don't build it u
 
 ```
 Phase 1  ✅  RAG service architecture (Binder, FileObserver, IndexQueue)
-Phase 2  ✅  Core RAG pipeline (ChunkingStrategy, MetadataSearch, RagIndexWorker)
+Phase 2  ✅  Core RAG pipeline (ChunkingStrategy, MetadataSearch, JarvisIndexWorker)
 Phase 3  ✅  ModelRegistry (named handle pairs, startup registration)
 Phase 4  🔄  Tool Registry (ToolScanner, ToolDispatcher, AppRecord/ToolRecord)
 Phase 5  📅  Agentic Loop (JarvisExecutor, AgentSession, RouterNode)
@@ -231,18 +231,18 @@ Phase 5  📅  Agentic Loop (JarvisExecutor, AgentSession, RouterNode)
 Phase 6  📅  Memory Consolidation (DreamWorker, nightly sessions, long-term facts)
               — Inspired by KAIROS autoDream pattern from Claude Code leak
               — Merges AgentTurn history into UserContext facts
-              — Runs via WorkManager, charging only, same pattern as RagIndexWorker
+              — Runs via WorkManager, charging only, same pattern as JarvisIndexWorker
 ```
 
 ---
 
 ## Key Design Principles for Phase 5
 
-1. **The loop is not in RagService** — JarvisExecutor is a separate component. RagService stays single-purpose.
+1. **The loop is not in JarvisService** — JarvisExecutor is a separate component. JarvisService stays single-purpose.
 2. **State after every turn** — AgentSession is written to ObjectBox before the next turn starts. If system_server crashes, the session can resume.
 3. **Deterministic routing** — RouterNode parses model output with string matching, not another model call. Same hackathon principle.
 4. **Max turns is a hard ceiling** — not a suggestion. Loop exits at 5 turns regardless. Prevents memory explosions in system_server.
-5. **RetrieveNode calls RagService via Binder** — not directly. Keeps the abstraction boundary clean.
+5. **RetrieveNode calls JarvisService via Binder** — not directly. Keeps the abstraction boundary clean.
 6. **ToolNode fires an Intent and waits for a result** — same broadcast + callback AIDL pattern from TOOL_REGISTRY.md. No coupling into tool internals.
 7. **DreamWorker is NOT Phase 5** — memory consolidation is Phase 6. Phase 5 just persists turns. Don't over-engineer the first loop.
 

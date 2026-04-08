@@ -50,7 +50,7 @@ User / App
     |
     | AIDL (Binder IPC)
     v
-RagService.java  (com.android.server.jarvis)
+JarvisService.java  (com.android.server.jarvis)
     |
     +-- ToolDispatcher          tool path (runs first on every query)
     |       |
@@ -65,7 +65,7 @@ RagService.java  (com.android.server.jarvis)
     |   IndexQueue              BlockingQueue (cap 500)
     |       |
     |       v
-    |   RagIndexWorker          WorkManager (15min, charging only)
+    |   JarvisIndexWorker          WorkManager (15min, charging only)
     |       |
     |       +-- TextExtractor        file → raw text
     |       +-- ChunkingStrategy     text → chunks
@@ -105,22 +105,22 @@ Public API layer in `frameworks/base/core/java/android/jarvis/`:
 
 ```
 jarvis/                              ← renamed from rag/ this session
-├── RagService.java              ✅ System service entry point
-├── IRagService.aidl             ✅ Binder interface (server-side copy)
+├── JarvisService.java              ✅ System service entry point
+├── IJarvisService.aidl             ✅ Binder interface (server-side copy)
 ├── Android.bp                   ✅ Build config — library: services.jarvis
 │
 ├── core/
 │   ├── JarvisStore.java         ✅ ObjectBox singleton
 │   ├── ModelRegistry.java       ✅ Named (modelHandle, indexHandle) pairs
 │   ├── IndexQueue.java          ✅ Singleton BlockingQueue, cap 500
-│   ├── RagManager.java          ✅ Public API manager
-│   └── RagException.java        ✅
+│   ├── JarvisManager.java          ✅ Public API manager
+│   └── JarvisException.java        ✅
 │
 ├── inference/
 │   └── CactusWrapper.java       ✅ JNI bridge — only entry point to Cactus
 │
 ├── indexing/
-│   ├── RagIndexWorker.java      ✅ WorkManager background indexer
+│   ├── JarvisIndexWorker.java      ✅ WorkManager background indexer
 │   ├── JarvisFileObserver.java  ✅ Watches Documents/Downloads/Pictures
 │   ├── TextExtractor.java       ✅ File → raw text (.txt .md .csv .pdf .docx)
 │   └── ChunkingStrategy.java    ✅ Sentence-boundary splitting + overlap
@@ -146,10 +146,10 @@ jarvis/                              ← renamed from rag/ this session
     └── ToolDispatcher.java      ✅ Resolves + fires tools via broadcast
 
 android/jarvis/                      ← public API layer ✅
-├── IRagService.aidl             ✅ package android.jarvis
+├── IJarvisService.aidl             ✅ package android.jarvis
 ├── IToolRegistry.aidl           ✅ package android.jarvis
-├── RagManager.java              ✅ package android.jarvis
-└── RagException.java            ✅ package android.jarvis
+├── JarvisManager.java              ✅ package android.jarvis
+└── JarvisException.java            ✅ package android.jarvis
 ```
 
 ---
@@ -160,20 +160,20 @@ android/jarvis/                      ← public API layer ✅
 LineageOS setup, AIDL interfaces, manifest entries, vendor overlay initialized.
 
 ### ✅ Phase 1 — RAG Service Architecture
-RagService registered in SystemServer. Binder IPC via AIDL. JarvisFileObserver →
-IndexQueue → RagIndexWorker pipeline. TextExtractor, MetadataSearch, CactusWrapper.
+JarvisService registered in SystemServer. Binder IPC via AIDL. JarvisFileObserver →
+IndexQueue → JarvisIndexWorker pipeline. TextExtractor, MetadataSearch, CactusWrapper.
 ObjectBox entities defined (8 entities).
 
 ### ✅ Phase 2 — Core RAG Pipeline
 Full pipeline: hash check → TextExtractor → ChunkingStrategy → embed → indexAdd →
-ObjectBox persist. MetadataSearch all 6 passes wired. RagManager + IRagService
+ObjectBox persist. MetadataSearch all 6 passes wired. JarvisManager + IJarvisService
 package fixed to `android.app.rag`. isIndexed() across full Binder stack.
 
 ### ✅ Phase 3 — Model Registry
 ModelRegistry singleton — named map of `{ name → (modelHandle, indexHandle, dim, indexDir) }`.
 Two entries registered at boot: "rag" (documents) and "tools" (tool embeddings).
 Same model file, separate index directories — indexes never mixed.
-RagIndexWorker updated to use ModelRegistry.getReady("rag") per task.
+JarvisIndexWorker updated to use ModelRegistry.getReady("rag") per task.
 
 ### ✅ Phase 4 — Tool Registry
 **Goal:** Android-native tool discovery and dispatch. Apps expose tools via manifest
@@ -190,7 +190,7 @@ queries to the right app via broadcast.
 - `ToolDispatcher.java` — semantic search (embed query → HNSW → top-5 ToolRecords) →
   metadata fallback → builds OpenAI-compatible toolsJson → CactusWrapper.complete()
   selects tool → broadcast to app receiver → ResultReceiver + CountDownLatch (10s timeout).
-- `RagService.java` — ToolDispatcher instantiated. processQuery() runs tool path first,
+- `JarvisService.java` — ToolDispatcher instantiated. processQuery() runs tool path first,
   falls through to RAG if resolveAndDispatch() returns null.
 - `ToolDefinition.java` — tombstoned.
 
@@ -202,7 +202,7 @@ versions when objectbox-generator deps land in prebuilts (see Android.bp TODO).
 ### 📅 Phase 5 — Agentic Loop
 See `AGENTIC_LOOP.md`. JarvisExecutor state machine inspired by LangGraph + Claude Code
 leak patterns. AgentSession (ObjectBox), RouterNode (deterministic), nodes: Plan →
-Retrieve → Tool → Respond. Max 5 turns. RetrieveNode calls RagService via Binder.
+Retrieve → Tool → Respond. Max 5 turns. RetrieveNode calls JarvisService via Binder.
 ToolNode calls ToolDispatcher. Requires Phase 4 complete first.
 
 ### 📅 Phase 6 — Memory Consolidation
@@ -246,12 +246,12 @@ Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
 | Hackathon | Won 2nd place Google DeepMind x Cactus — tool calling optimization, semantic chunking |
 | Feb 2026 | dev.talk speaker slot confirmed |
 | Mar 2026 session 1 | Reconnected, filesystem access established, AGENTS.md created, Phase 1 scoped |
-| Mar 2026 session 2 | Phase 1 complete — RagService, FileObserver, IndexQueue, RagIndexWorker, TextExtractor, MetadataSearch, CactusWrapper, ObjectBox entities |
+| Mar 2026 session 2 | Phase 1 complete — JarvisService, FileObserver, IndexQueue, JarvisIndexWorker, TextExtractor, MetadataSearch, CactusWrapper, ObjectBox entities |
 | Mar 2026 session 3 | Cactus fork explored — JarvisOS JNI bindings added, Android.bp written, jarvisos.mk created |
 | Mar 2026 session 4 | Git emergency — cherry-picked commits onto correct branch, resolved conflicts, pushed |
-| Mar 2026 session 5 | Phase 2 complete — full RAG pipeline, RagManager, IRagService fixed |
+| Mar 2026 session 5 | Phase 2 complete — full RAG pipeline, JarvisManager, IJarvisService fixed |
 | Mar 2026 session 6 | Presentation work + protocol design. Tool Registry ObjectBox schema designed. |
-| Mar 2026 session 7 | Phase 3 complete — ModelRegistry.java, RagIndexWorker updated, RagService wired. lineage-22.2 re-sync decision made. |
-| Apr 2026 session 8 | Phase 4 in progress — AppRecord, ToolRecord, ToolScannerService rewritten, ToolDispatcher written, RagService updated. All MDs migrated to vendor/jarvisos. CLAUDE.md created for Claude Code remote. AGENTIC_LOOP.md written. Dispatch + Claude Code remote workflow established. |
+| Mar 2026 session 7 | Phase 3 complete — ModelRegistry.java, JarvisIndexWorker updated, JarvisService wired. lineage-22.2 re-sync decision made. |
+| Apr 2026 session 8 | Phase 4 in progress — AppRecord, ToolRecord, ToolScannerService rewritten, ToolDispatcher written, JarvisService updated. All MDs migrated to vendor/jarvisos. CLAUDE.md created for Claude Code remote. AGENTIC_LOOP.md written. Dispatch + Claude Code remote workflow established. |
 | Apr 2026 session 9 | Package rename: com.android.server.rag → com.android.server.jarvis. All 27 server-side files written to new jarvis/ folder. HANDOFF + AGENTS updated. Layer 2 (android/rag/ → android/jarvis/) and git rm of old folder left for Claude Code. Claude Code installed in WSL. |
 | Apr 2026 session 10 | Removed old rag/ folders (server/rag, android/rag). Layer 2 public API now clean at android/jarvis/. CLAUDE.md, AGENTS.md, HANDOFF.md, TASK_1.md updated to reference jarvis package only. |

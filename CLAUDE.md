@@ -38,28 +38,28 @@ lineage/                                        ← BUILD ROOT (when running loc
 │   └── RESEARCH_CALM_TURBOQUANT.md             ← future research
 │
 ├── frameworks/base/core/java/android/jarvis/   ← public API layer
-│   ├── IRagService.aidl                        ← public Binder interface
+│   ├── IJarvisService.aidl                        ← public Binder interface
 │   ├── IToolRegistry.aidl                      ← public tool registry interface
-│   ├── RagManager.java                         ← app-facing API
-│   └── RagException.java
+│   ├── JarvisManager.java                         ← app-facing API
+│   └── JarvisException.java
 │
 └── frameworks/base/services/core/java/com/android/server/jarvis/
-    ├── RagService.java                         ← system service entry point
-    ├── IRagService.aidl                        ← server-side Binder stub
+    ├── JarvisService.java                         ← system service entry point
+    ├── IJarvisService.aidl                        ← server-side Binder stub
     ├── Android.bp                              ← build config (services.jarvis)
     │
     ├── core/
     │   ├── JarvisStore.java                    ← ObjectBox singleton
     │   ├── ModelRegistry.java                  ← (modelHandle, indexHandle) pairs
     │   ├── IndexQueue.java                     ← BlockingQueue for indexing tasks
-    │   ├── RagManager.java                     ← public API manager
-    │   └── RagException.java
+    │   ├── JarvisManager.java                     ← public API manager
+    │   └── JarvisException.java
     │
     ├── inference/
     │   └── CactusWrapper.java                  ← JNI bridge to libcactus.so
     │
     ├── indexing/
-    │   ├── RagIndexWorker.java                 ← WorkManager background indexer
+    │   ├── JarvisIndexWorker.java                 ← WorkManager background indexer
     │   ├── JarvisFileObserver.java             ← watches Documents/Downloads/Pictures
     │   ├── TextExtractor.java                  ← file → raw text
     │   └── ChunkingStrategy.java               ← text → chunks
@@ -92,7 +92,7 @@ lineage/                                        ← BUILD ROOT (when running loc
 | Phase | Status | Notes |
 |-------|--------|-------|
 | 0 | ✅ Done | LineageOS setup, AIDL, manifest |
-| 1 | ✅ Done | RagService, Binder, FileObserver, IndexQueue |
+| 1 | ✅ Done | JarvisService, Binder, FileObserver, IndexQueue |
 | 2 | ✅ Done | Full RAG pipeline |
 | 3 | ✅ Done | ModelRegistry — "rag" + "tools" handle pairs |
 | 4 | 🔄 In progress | AppRecord/ToolRecord/ToolScannerService/ToolDispatcher written. IToolRegistry.aidl + Android.bp wiring still needed |

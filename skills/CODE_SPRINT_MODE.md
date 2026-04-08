@@ -35,6 +35,6 @@ docs: documentation updates only
 ## Before writing any file
 
 1. Read the existing file if it exists
-2. Read related files (Android.bp, RagService.java etc)
+2. Read related files (Android.bp, JarvisService.java etc)
 3. Check what's already imported
 4. Then write

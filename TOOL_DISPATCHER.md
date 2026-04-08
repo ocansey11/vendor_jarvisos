@@ -7,11 +7,11 @@
 ## What ToolDispatcher Does
 
 ToolDispatcher is the component that takes a user's natural language query, finds the
-right tool for it, and fires it at the correct app. It sits between RagService and
+right tool for it, and fires it at the correct app. It sits between JarvisService and
 the installed apps.
 
 ```
-RagService.processQuery("check my visa status")
+JarvisService.processQuery("check my visa status")
     |
     v
 ToolDispatcher.resolveAndDispatch(query)
@@ -23,7 +23,7 @@ ToolDispatcher.resolveAndDispatch(query)
     └── 5. Wait for ResultReceiver (10s timeout) → return result string
 ```
 
-Returns `null` if no tool matches. RagService falls through to the RAG pipeline.
+Returns `null` if no tool matches. JarvisService falls through to the RAG pipeline.
 
 ---
 

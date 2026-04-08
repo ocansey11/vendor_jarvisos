@@ -27,10 +27,10 @@ Updated all MDs to reference `android.jarvis` / `com.android.server.jarvis` only
 
 ```
 frameworks/base/core/java/android/jarvis/         ← public API (package android.jarvis)
-    IRagService.aidl, IToolRegistry.aidl, RagManager.java, RagException.java
+    IJarvisService.aidl, IToolRegistry.aidl, JarvisManager.java, JarvisException.java
 
 frameworks/base/services/core/java/com/android/server/jarvis/   ← system service
-    RagService.java, Android.bp, IRagService.aidl
+    JarvisService.java, Android.bp, IJarvisService.aidl
     core/, inference/, indexing/, search/, model/, tools/
 ```
 
@@ -45,8 +45,8 @@ frameworks/base/services/core/java/com/android/server/jarvis/   ← system servi
   Until then: document the build gap in Android.bp as a TODO comment.
 
 - [ ] **Add IToolRegistry.aidl wiring**
-  `RagService.java` publishes `"jarvis_tools"` via `ServiceManager.addService()`.
-  Verify the `IToolRegistry.aidl` stub is imported correctly in `RagService.java`.
+  `JarvisService.java` publishes `"jarvis_tools"` via `ServiceManager.addService()`.
+  Verify the `IToolRegistry.aidl` stub is imported correctly in `JarvisService.java`.
 
 - [ ] **Commit**
   Suggested message: `refactor: remove rag/ package, jarvis/ is now the only location`
@@ -55,7 +55,7 @@ frameworks/base/services/core/java/com/android/server/jarvis/   ← system servi
 
 ## Key facts (carry forward)
 
-- Service name strings `"rag"` and `"jarvis_tools"` in RagService are runtime strings — unchanged
+- Service name strings `"jarvis"` and `"jarvis_tools"` in JarvisService are runtime strings — unchanged
 - IToolRegistry published as `"jarvis_tools"` — separate from `"rag"` service
 - ToolDispatcher.resolveAndDispatch() returns null on no match — falls through to RAG
 - Tool broadcast timeout: 10 seconds
