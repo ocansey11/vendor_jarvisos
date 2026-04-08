@@ -199,11 +199,24 @@ SourceFile_, Folder_, AccessLog_, TaskMemory_) + MyObjectBox stub. Committed
 as `31f59143`. getCursorFactory() stubs throw — replace with processor-generated
 versions when objectbox-generator deps land in prebuilts (see Android.bp TODO).
 
-### 📅 Phase 5 — Agentic Loop
-See `AGENTIC_LOOP.md`. JarvisExecutor state machine inspired by LangGraph + Claude Code
-leak patterns. AgentSession (ObjectBox), RouterNode (deterministic), nodes: Plan →
-Retrieve → Tool → Respond. Max 5 turns. RetrieveNode calls JarvisService via Binder.
-ToolNode calls ToolDispatcher. Requires Phase 4 complete first.
+### ✅ Phase 5 — Agentic Loop
+JarvisExecutor state machine. LangGraph-validated design, Claude Code leak patterns.
+
+**Done:**
+- `agent/JarvisExecutor.java` — loop runner: Plan→[Retrieve?]→[Tool?→Plan]→Respond
+- `agent/RouterNode.java` — deterministic routing via Gemma 4 `<|tool_call|>` token check
+- `agent/PlanNode.java` — first-turn planning, uses "primary" or "rag" ModelRegistry entry
+- `agent/RetrieveNode.java` — MetadataSearch Stage 1 + HNSW Stage 2, appends to accumulatedContext
+- `agent/ToolNode.java` — parses Gemma 4 `<|tool_call|>`..`<|end_tool_call|>` JSON, calls dispatchByName()
+- `agent/RespondNode.java` — final CactusWrapper.complete() with accumulated context
+- `model/AgentSession.java` + `AgentSession_.java` — ObjectBox entity + stub; persisted after every node
+- `model/AgentTurn.java` + `AgentTurn_.java` — ObjectBox entity + stub; full turn history for Phase 6
+- `ToolDispatcher.dispatchByName()` — named dispatch bypassing semantic search (for ToolNode)
+- `JarvisService.processQuery()` → routes through JarvisExecutor
+- `MyObjectBox` updated to register AgentSession + AgentTurn
+
+**Max turns:** 5 hard ceiling. KV cache growth and mobile thermal throttling make this non-negotiable.
+**Gemma 4 prerequisite (Sam):** pull upstream llama.cpp into Cactus, confirm `<|tool_call|>` output works.
 
 ### 📅 Phase 6 — Memory Consolidation
 DreamWorker — nightly WorkManager job. Merges AgentTurn history into UserContext facts.
@@ -255,3 +268,4 @@ Inspired by KAIROS autoDream pattern from Claude Code leak. Charging only.
 | Apr 2026 session 8 | Phase 4 in progress — AppRecord, ToolRecord, ToolScannerService rewritten, ToolDispatcher written, JarvisService updated. All MDs migrated to vendor/jarvisos. CLAUDE.md created for Claude Code remote. AGENTIC_LOOP.md written. Dispatch + Claude Code remote workflow established. |
 | Apr 2026 session 9 | Package rename: com.android.server.rag → com.android.server.jarvis. All 27 server-side files written to new jarvis/ folder. HANDOFF + AGENTS updated. Layer 2 (android/rag/ → android/jarvis/) and git rm of old folder left for Claude Code. Claude Code installed in WSL. |
 | Apr 2026 session 10 | Removed old rag/ folders (server/rag, android/rag). Layer 2 public API now clean at android/jarvis/. CLAUDE.md, AGENTS.md, HANDOFF.md, TASK_1.md updated to reference jarvis package only. |
+| Apr 2026 session 11 | Cactus JNI bindings fixed (10 methods still referenced com.android.server.rag — UnsatisfiedLinkError blocker). Phase 5 complete: JarvisExecutor, 5 nodes, AgentSession/AgentTurn entities, ToolDispatcher.dispatchByName(). Pushed to both repos. |
