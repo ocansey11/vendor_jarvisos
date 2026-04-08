@@ -2,82 +2,71 @@
 
 ## Code state
 
-| Repo | Branch | Status |
-|------|--------|--------|
-| frameworks/base | lineage-21.0 | ✅ Phase 5 committed + pushed (f43771b) |
-| vendor/jarvisos | main | 🔄 MDs updated this session — not yet committed |
-| vendor/cactus | main | ✅ JNI fix committed + pushed (a52d69f) |
+| Repo | Branch | Last commit | Status |
+|------|--------|-------------|--------|
+| frameworks/base | lineage-21.0 | 1b04e21 | ✅ Phase 6 pushed |
+| vendor/jarvisos | main | 3268457 | ✅ clean |
+| vendor/cactus | main | a52d69f | ✅ JNI fix pushed |
 
 ---
 
-## This session — Phase 5 agentic loop + Cactus JNI fix
+## What was built this session
 
-### Critical bug fixed
-All 10 JNI bindings in `vendor/cactus/android/cactus_jni.cpp` still referenced
-`com.android.server.rag.CactusWrapper`. After the package rename these caused
-`UnsatisfiedLinkError` at runtime — Cactus would fail to load. Fixed to
-`com.android.server.jarvis.inference.CactusWrapper`.
+### Phase 5 — Agentic loop (complete)
+- `agent/JarvisExecutor.java` — stateful loop (Plan→Retrieve→Tool→Respond, max 5 turns)
+- `agent/RouterNode.java` — deterministic `<|tool_call|>` token check, no model call
+- `agent/PlanNode.java`, `RetrieveNode.java`, `ToolNode.java`, `RespondNode.java`
+- `model/AgentSession.java` + `AgentTurn.java` — ObjectBox entities, persisted after every node
+- `ToolDispatcher.dispatchByName()` — named tool dispatch for ToolNode
+- `JarvisService.processQuery()` → routes through JarvisExecutor
 
-### Phase 5 written
-```
-frameworks/base/services/core/java/com/android/server/jarvis/
-│
-├── agent/                     ← NEW
-│   ├── JarvisExecutor.java    ← loop runner (Plan→Retrieve→Tool→Respond, max 5 turns)
-│   ├── RouterNode.java        ← deterministic routing: <|tool_call|> token check
-│   ├── PlanNode.java          ← first-turn plan generation via Gemma 4 / "rag" fallback
-│   ├── RetrieveNode.java      ← Stage 1 MetadataSearch + Stage 2 HNSW retrieval
-│   ├── ToolNode.java          ← parses Gemma 4 tool call JSON → dispatchByName()
-│   └── RespondNode.java       ← final answer via CactusWrapper.complete()
-│
-└── model/                     ← UPDATED
-    ├── AgentSession.java      ← ObjectBox entity: persisted loop state
-    ├── AgentSession_.java     ← ObjectBox stub
-    ├── AgentTurn.java         ← ObjectBox entity: one turn in a session
-    └── AgentTurn_.java        ← ObjectBox stub
-```
+### Phase 6 — Memory, multimodal, sub-agents (complete)
+- `agent/DreamWorker.java` — nightly WorkManager (24h, charging). Merges AgentTurns → UserContext.facts
+- `agent/SubAgentExecutor.java` — child loop for sub-tasks (maxTurns=2, inherits parent context)
+- `IJarvisService.aidl` — `processQueryWithImage()` + `processQueryWithAudio()` added to both copies
+- `JarvisService` — implements both multimodal methods (text fallback until Cactus Gemma 4 pull)
+- `JarvisManager` — `queryWithImage()` + `queryWithAudio()` public wrappers
+- `UserContext` — `facts` (JSON array, cap 50) + `consolidatedAt` fields
+- `AgentSession` — `consolidated` flag for DreamWorker gate
 
-Also:
-- `ToolDispatcher.dispatchByName(toolName, argsJson)` — bypasses semantic search, used by ToolNode
-- `JarvisService.processQuery()` → now routes through `JarvisExecutor.execute(query)`
-- `MyObjectBox` registers AgentSession + AgentTurn
+### Cactus JNI fix
+All 10 JNI bindings in `cactus_jni.cpp` still referenced `com.android.server.rag` —
+fixed to `com.android.server.jarvis.inference`. Would have caused `UnsatisfiedLinkError` at runtime.
 
 ---
 
-## What Claude Code must do next (in order)
+## What to do next (in order)
 
-- [ ] **Sam: Cactus upstream pull**
-  Pull upstream llama.cpp Gemma 4 support into `vendor/cactus`.
-  Target commits: `GEMMA4 = 15` in ModelType, `ToolCallInfo` struct, `gemma4/` model dir.
-  Confirm `CactusWrapper.complete()` outputs `<|tool_call|>` token with a Gemma 4 GGUF.
-  Until then: Phase 5 loop compiles and runs, but falls back to the "rag" model entry
-  which may not emit Gemma 4 tool tokens.
+- [ ] **Sam: pull Gemma 4 into vendor/cactus**
+  Pull upstream llama.cpp Gemma 4 support. Key things to land:
+  `GEMMA4 = 15` in ModelType, `ToolCallInfo` struct, `gemma4/` model sources, Android.bp updated.
+  Confirm `<|tool_call|>` token appears in CactusWrapper.complete() output with a Gemma 4 GGUF.
+  Fill in the `TODO` blocks in `JarvisService.processQueryWithImage/Audio()`.
 
-- [ ] **Register "primary" ModelRegistry entry**
-  In `JarvisService.initializeAsync()`, add:
+- [ ] **Register "primary" ModelRegistry entry in JarvisService**
+  Once Gemma 4 GGUF path is known, add:
   ```java
-  ModelRegistry.ModelEntry primary = registry.register("primary", GEMMA4_MODEL_PATH,
-      INDEX_DIR_RAG, EMBED_DIM);
+  registry.register("primary", GEMMA4_MODEL_PATH, INDEX_DIR_RAG, EMBED_DIM);
   ```
-  `PlanNode` and `RespondNode` already prefer "primary" and fall back to "rag".
-  Add `GEMMA4_MODEL_PATH` constant once the Gemma 4 GGUF path is known.
+  PlanNode + RespondNode + DreamWorker already prefer "primary", fall back to "rag".
 
-- [ ] **Wire Android.bp for agent/ package**
-  The `agent/` directory isn't explicitly listed in Android.bp — Soong should pick it up
-  via `java_library_static` glob, but verify after adding the new package.
+- [ ] **lineage-22.2 re-sync** (do at uni, fast connection, ~3hrs, run in tmux)
+  Nothing Phone 2 (Pong) target requires 22.2. All JarvisOS code is pure Java — no conflicts expected.
 
-- [ ] **Commit vendor/jarvisos MDs** (AGENTS.md, HANDOFF.md updated this session)
+- [ ] **On-device test on ARM hardware**
+  x86_64 emulators cannot load Cactus. Minimum: Android 14 ARM device.
+  Test path: boot → JarvisService starts → CactusWrapper.init() succeeds →
+  processQuery() runs JarvisExecutor → RouterNode routes correctly.
 
 ---
 
 ## Key facts (carry forward)
 
-- Cactus JNI bindings: `Java_com_android_server_jarvis_inference_CactusWrapper_*`
-- JarvisExecutor replaces the old direct tool/RAG dispatch in processQuery()
-- RouterNode is deterministic — no model call. Token check only.
-- maxTurns = 5. Hard ceiling. Don't raise without profiling on target hardware.
-- AgentSession/AgentTurn persisted after every node — crash-resumable
-- DreamWorker (Phase 6) will consume AgentTurn history → UserContext facts
-- lineage-22.2 re-sync still pending (do at uni, fast connection, ~3hrs, run in tmux)
+- Cactus JNI: `Java_com_android_server_jarvis_inference_CactusWrapper_*`
+- JarvisExecutor is the entry point for all queries — JarvisService no longer dispatches directly
+- RouterNode is deterministic, no model call — `<|tool_call|>` token boundary check only
+- maxTurns = 5 (parent sessions), 2 (sub-agent sessions) — do NOT raise without hardware profiling
+- DreamWorker runs nightly, charging only — first run consolidates any sessions from testing
+- Multimodal API is wired end-to-end; CactusWrapper calls are the only missing piece
 - No Kotlin in system_server
-- x86_64 emulators cannot load Cactus — ARM hardware only for native testing
+- x86_64 emulators cannot load Cactus — ARM hardware only
