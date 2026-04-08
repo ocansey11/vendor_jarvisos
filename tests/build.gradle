@@ -1,0 +1,68 @@
+plugins {
+    id 'java'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            // Android stubs (Log, Context, WorkManager etc) — just enough to compile
+            srcDirs = ['stubs']
+        }
+    }
+    test {
+        java {
+            srcDirs = [
+                '../../../frameworks/base/services/core/java',
+                'src/test/java'
+            ]
+            // Only compile the files the agent tests actually need.
+            // JarvisService, FileObserver, ToolScannerService etc. are excluded —
+            // they depend on Android framework classes we'd need to stub exhaustively.
+            include 'com/android/server/jarvis/agent/**'
+            include 'com/android/server/jarvis/model/**'
+            include 'com/android/server/jarvis/inference/CactusWrapper.java'
+            include 'com/android/server/jarvis/core/JarvisStore.java'
+            include 'com/android/server/jarvis/core/ModelRegistry.java'
+            include 'com/android/server/jarvis/search/MetadataSearch.java'
+            include 'com/android/server/jarvis/tools/ToolDispatcher.java'
+            include 'com/android/server/jarvis/tools/AppRecord.java'
+            include 'com/android/server/jarvis/tools/ToolRecord.java'
+            include 'com/android/server/jarvis/tools/AppRecord_.java'
+            include 'com/android/server/jarvis/tools/ToolRecord_.java'
+        }
+    }
+}
+
+dependencies {
+    // JSON — used throughout JarvisOS source
+    implementation 'org.json:json:20240303'
+
+    // ObjectBox Java API — annotations + Box/Query interfaces (no native runtime needed)
+    implementation 'io.objectbox:objectbox-java:4.0.3'
+
+    // JUnit 5
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly  'org.junit.platform:junit-platform-launcher'
+
+    // Mockito 5 — includes static mocking (for CactusWrapper, JarvisStore)
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+}
+
+test {
+    useJUnitPlatform()
+    // Print each test name as it runs
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        exceptionFormat 'full'
+    }
+}
