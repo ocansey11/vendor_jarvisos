@@ -1,0 +1,13 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/create_calendar_event",
+  "tool_name": "create_calendar_event",
+  "description": "Create a new event in the device calendar",
+  "params": [
+    {"name": "title",            "type": "string",  "required": true,  "description": "Event title"},
+    {"name": "start_time",       "type": "string",  "required": true,  "description": "Start time in format YYYY-MM-DD HH:MM"},
+    {"name": "duration_minutes", "type": "integer", "required": false, "description": "Duration in minutes (default 60)"},
+    {"name": "description",      "type": "string",  "required": false, "description": "Event description or notes"}
+  ]
+}

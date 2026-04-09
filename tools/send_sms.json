@@ -1,0 +1,11 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/send_sms",
+  "tool_name": "send_sms",
+  "description": "Send an SMS text message to a phone number",
+  "params": [
+    {"name": "to",   "type": "string", "required": true, "description": "Recipient phone number"},
+    {"name": "body", "type": "string", "required": true, "description": "Message text to send"}
+  ]
+}

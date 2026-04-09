@@ -1,0 +1,11 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/set_volume",
+  "tool_name": "set_volume",
+  "description": "Adjust the volume of music, ringtone, or alarms. Use when user says louder, quieter, turn up, turn down, lower the volume, increase volume, mute, or set volume to a percentage.",
+  "params": [
+    {"name": "level",  "type": "integer", "required": true,  "description": "Volume level as a percentage from 0 to 100"},
+    {"name": "stream", "type": "string",  "required": false, "description": "Audio stream: music (default), ring, alarm, notification"}
+  ]
+}

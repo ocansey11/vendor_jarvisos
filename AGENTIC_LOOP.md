@@ -459,6 +459,55 @@ Remaining open questions:
 
 ---
 
+## Chaining Scenarios — dev.talk Demo
+
+The agentic loop chains tools automatically. Gemma 4 outputs a `<|tool_call|>` block,
+ToolNode dispatches it, result goes into `accumulatedContext`, RouterNode checks the next
+plan output for another tool call, loop continues until RespondNode produces the final answer.
+
+No code changes are needed for chaining — it is wired. These scenarios work with the current
+tool set once deployed on ARM hardware with Gemma 4 loaded.
+
+### Scenario 1 — "I'm heading into a meeting"
+```
+User: "I'm heading into a meeting in 10 minutes"
+
+Turn 1 — PlanNode: model decides → set_dnd + create_calendar_event + send_sms
+Turn 2 — ToolNode: set_dnd(mode="priority")          → "DND: priority contacts only"
+Turn 3 — RouterNode: another tool call detected
+Turn 4 — ToolNode: create_calendar_event(...)         → "Event created: Meeting..."
+Turn 5 — RouterNode: another tool call detected
+Turn 6 — ToolNode: send_sms(to=..., body="In a meeting, back soon") → "SMS sent"
+Turn 7 — RouterNode: no more tool calls
+Turn 8 — RespondNode: "Done — DND is on, your meeting is in the calendar,
+                       and I've texted your contacts."
+```
+
+### Scenario 2 — "Good morning"
+```
+User: "Good morning"
+
+Turn 1 — PlanNode → get_notifications + get_battery_status + media_control
+Turn 2 — ToolNode: get_notifications()    → "4 notifications: WhatsApp(2) Gmail(1) BBC(1)"
+Turn 3 — ToolNode: get_battery_status()   → "Battery: 82% (charging)"
+Turn 4 — ToolNode: media_control(action="play") → "Playing"
+Turn 5 — RespondNode: "Morning! You have 4 notifications — 2 WhatsApp, 1 Gmail, 1 BBC News.
+                       Battery is at 82% and still charging. I've started your music."
+```
+
+### Scenario 3 — "I'm going to bed"
+```
+User: "I'm going to bed"
+
+Turn 1 — PlanNode → set_alarm + set_dnd + set_brightness
+Turn 2 — ToolNode: set_alarm(hour=7, minute=0, label="Wake up")  → "Alarm set for 07:00"
+Turn 3 — ToolNode: set_dnd(mode="alarms")   → "DND: alarms only"
+Turn 4 — ToolNode: set_brightness(level=0)  → "Brightness set to 0%"
+Turn 5 — RespondNode: "Goodnight — alarm set for 7am, DND on (alarms only), screen dimmed."
+```
+
+---
+
 ## Research References
 
 All decisions in this document are backed by the following sources.

@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/toggle_bluetooth",
+  "tool_name": "toggle_bluetooth",
+  "description": "Turn Bluetooth on or off. Use when user says turn on Bluetooth, enable Bluetooth, connect to headphones, turn off Bluetooth, or disable Bluetooth.",
+  "params": [
+    {"name": "enabled", "type": "boolean", "required": true, "description": "true to enable Bluetooth, false to disable"}
+  ]
+}

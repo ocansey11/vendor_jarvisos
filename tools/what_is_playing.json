@@ -1,0 +1,8 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/what_is_playing",
+  "tool_name": "what_is_playing",
+  "description": "Find out what music or media is currently playing. Use when user asks what song is this, what is playing, who sings this, or what track is on.",
+  "params": []
+}

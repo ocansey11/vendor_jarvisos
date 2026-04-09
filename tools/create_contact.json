@@ -1,0 +1,12 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/create_contact",
+  "tool_name": "create_contact",
+  "description": "Save a new contact to the device address book",
+  "params": [
+    {"name": "name",  "type": "string", "required": true,  "description": "Full name of the contact"},
+    {"name": "phone", "type": "string", "required": false, "description": "Phone number"},
+    {"name": "email", "type": "string", "required": false, "description": "Email address"}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/get_notifications",
+  "tool_name": "get_notifications",
+  "description": "Read a summary of active notifications on the device. Use when user asks what notifications do I have, did I miss anything, any alerts, what came in, or check my notifications.",
+  "params": []
+}

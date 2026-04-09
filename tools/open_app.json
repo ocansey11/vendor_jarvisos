@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/open_app",
+  "tool_name": "open_app",
+  "description": "Launch an installed app by its package name",
+  "params": [
+    {"name": "package_name", "type": "string", "required": true, "description": "The app's package name, e.g. com.android.camera"}
+  ]
+}

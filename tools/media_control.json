@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/media_control",
+  "tool_name": "media_control",
+  "description": "Control media playback on the device. Use when user says play, pause, resume, skip, next, previous, stop, or wants to control music or video.",
+  "params": [
+    {"name": "action", "type": "string", "required": true, "description": "One of: play, pause, next, previous, stop"}
+  ]
+}

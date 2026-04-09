@@ -1,0 +1,8 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/get_battery_status",
+  "tool_name": "get_battery_status",
+  "description": "Get the current battery level and whether the device is charging",
+  "params": []
+}

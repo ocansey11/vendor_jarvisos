@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/set_dnd",
+  "tool_name": "set_dnd",
+  "description": "Enable or disable Do Not Disturb mode. Use when user says do not disturb, silence my phone, I am in a meeting, DND on, stop interruptions, or turn off DND.",
+  "params": [
+    {"name": "mode", "type": "string", "required": true, "description": "DND mode: priority (contacts only), alarms (alarms only), total_silence, or off"}
+  ]
+}

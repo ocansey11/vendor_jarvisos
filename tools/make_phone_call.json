@@ -1,0 +1,11 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/make_phone_call",
+  "tool_name": "make_phone_call",
+  "description": "Place a phone call to a number. Use when user says call, ring, dial, phone someone, or call a number. NOT for sending messages — use send_sms for that.",
+  "requires_confirmation": true,
+  "params": [
+    {"name": "number", "type": "string", "required": true, "description": "Phone number to call, e.g. +44712345678"}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/toggle_wifi",
+  "tool_name": "toggle_wifi",
+  "description": "Turn WiFi on or off. Use when user says turn on WiFi, enable WiFi, turn off WiFi, disable WiFi, or connect to WiFi.",
+  "params": [
+    {"name": "enabled", "type": "boolean", "required": true, "description": "true to enable WiFi, false to disable"}
+  ]
+}
