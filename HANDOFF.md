@@ -1,72 +1,95 @@
-# JarvisOS Handoff — Session 11 (Apr 2026)
+# JarvisOS Handoff — Session 12 (Apr 2026)
 
 ## Code state
 
 | Repo | Branch | Last commit | Status |
 |------|--------|-------------|--------|
-| frameworks/base | lineage-21.0 | 1b04e21 | ✅ Phase 6 pushed |
-| vendor/jarvisos | main | 3268457 | ✅ clean |
-| vendor/cactus | main | a52d69f | ✅ JNI fix pushed |
+| frameworks/base | lineage-21.0 | af1a9a86 | ✅ pushed |
+| vendor/jarvisos | main | f7f8bb3 | ✅ pushed |
+| vendor/cactus | main | a52d69f | ✅ unchanged |
 
 ---
 
 ## What was built this session
 
-### Phase 5 — Agentic loop (complete)
-- `agent/JarvisExecutor.java` — stateful loop (Plan→Retrieve→Tool→Respond, max 5 turns)
-- `agent/RouterNode.java` — deterministic `<|tool_call|>` token check, no model call
-- `agent/PlanNode.java`, `RetrieveNode.java`, `ToolNode.java`, `RespondNode.java`
-- `model/AgentSession.java` + `AgentTurn.java` — ObjectBox entities, persisted after every node
-- `ToolDispatcher.dispatchByName()` — named tool dispatch for ToolNode
-- `JarvisService.processQuery()` → routes through JarvisExecutor
+### ModelRegistry — "primary" chat model entry
+- `ModelEntry` gains `chatOnly` flag. `isReady()` only requires `modelHandle` for chat-only entries.
+- `registerChatModel(name, modelPath)` — new method, skips `indexInit` (chat models don't need a vector index).
+- `destroy()` skips `indexDestroy` for chat-only entries.
+- `JarvisService` registers `"primary"` at `GEMMA4_MODEL_PATH = /data/system/jarvis/models/gemma4.gguf`.
+  PlanNode + RespondNode + DreamWorker already prefer `"primary"`, fall back to `"rag"`.
+  Will activate automatically once Sam drops the GGUF at that path.
 
-### Phase 6 — Memory, multimodal, sub-agents (complete)
-- `agent/DreamWorker.java` — nightly WorkManager (24h, charging). Merges AgentTurns → UserContext.facts
-- `agent/SubAgentExecutor.java` — child loop for sub-tasks (maxTurns=2, inherits parent context)
-- `IJarvisService.aidl` — `processQueryWithImage()` + `processQueryWithAudio()` added to both copies
-- `JarvisService` — implements both multimodal methods (text fallback until Cactus Gemma 4 pull)
-- `JarvisManager` — `queryWithImage()` + `queryWithAudio()` public wrappers
-- `UserContext` — `facts` (JSON array, cap 50) + `consolidatedAt` fields
-- `AgentSession` — `consolidated` flag for DreamWorker gate
+### Curated tool loader — ToolScannerService
+- `loadCuratedTools()` reads `/system/etc/jarvisos/tools/*.json` at boot.
+- Upserts as `sourceType="curated"` ToolRecords — same ObjectBox path as manifest-declared tools.
+- JSON files placed in `vendor/jarvisos/tools/` → device path via `PRODUCT_COPY_FILES` (still needed in makefile).
 
-### Cactus JNI fix
-All 10 JNI bindings in `cactus_jni.cpp` still referenced `com.android.server.rag` —
-fixed to `com.android.server.jarvis.inference`. Would have caused `UnsatisfiedLinkError` at runtime.
+### SystemToolExecutor — 16 in-process system tools
+All dispatched by ToolDispatcher when `receiverClass.startsWith("@system/")`. No broadcast.
+
+| Tool | API |
+|------|-----|
+| `get_battery_status` | BatteryManager |
+| `get_notifications` | INotificationManager (system internal) |
+| `what_is_playing` | MediaSessionManager + MediaController.getMetadata() |
+| `media_control` | MediaController.getTransportControls() |
+| `set_volume` | AudioManager.setStreamVolume() |
+| `send_sms` | SmsManager |
+| `make_phone_call` | TelecomManager.placeCall() |
+| `set_alarm` | Intent.ACTION_SET_ALARM → default clock app |
+| `create_contact` | ContactsContract direct insert |
+| `create_calendar_event` | CalendarContract direct insert |
+| `set_dnd` | NotificationManager.setInterruptionFilter() |
+| `toggle_wifi` | WifiManager.setWifiEnabled() |
+| `toggle_bluetooth` | BluetoothAdapter.enable/disable() |
+| `set_brightness` | Settings.System.SCREEN_BRIGHTNESS |
+| `set_flashlight` | CameraManager.setTorchMode() |
+| `open_app` | getLaunchIntentForPackage() + startActivity() |
+
+### Tool descriptions
+Each JSON includes explicit trigger words so FunctionGemma 270M can
+distinguish tools in zero-shot (e.g. "louder, quieter, turn up, turn down" for set_volume).
+
+### Chaining scenarios documented in AGENTIC_LOOP.md
+Three composite demo scenarios for dev.talk — work with current JarvisExecutor,
+no code changes needed. Test on ARM once Gemma 4 is loaded.
 
 ---
 
 ## What to do next (in order)
 
-- [ ] **Sam: pull Gemma 4 into vendor/cactus**
-  Pull upstream llama.cpp Gemma 4 support. Key things to land:
-  `GEMMA4 = 15` in ModelType, `ToolCallInfo` struct, `gemma4/` model sources, Android.bp updated.
-  Confirm `<|tool_call|>` token appears in CactusWrapper.complete() output with a Gemma 4 GGUF.
-  Fill in the `TODO` blocks in `JarvisService.processQueryWithImage/Audio()`.
-
-- [ ] **Register "primary" ModelRegistry entry in JarvisService**
-  Once Gemma 4 GGUF path is known, add:
-  ```java
-  registry.register("primary", GEMMA4_MODEL_PATH, INDEX_DIR_RAG, EMBED_DIM);
+- [ ] **PRODUCT_COPY_FILES for tool JSON** (15 min)
+  Add to `vendor/jarvisos/jarvisos.mk` (or equivalent makefile):
+  ```makefile
+  PRODUCT_COPY_FILES += $(foreach f,$(wildcard vendor/jarvisos/tools/*.json),\
+      $(f):system/etc/jarvisos/tools/$(notdir $(f)))
   ```
-  PlanNode + RespondNode + DreamWorker already prefer "primary", fall back to "rag".
+  Without this the JSON files won't appear at `/system/etc/jarvisos/tools/` on device.
+
+- [ ] **Sam: pull Gemma 4 into vendor/cactus**
+  `GEMMA4_MODEL_PATH` is wired. Once the GGUF is at `/data/system/jarvis/models/gemma4.gguf`
+  and Cactus supports the format, `"primary"` activates automatically.
+  Confirm `<|tool_call|>` token appears in `CactusWrapper.complete()` output.
+
+- [ ] **requires_confirmation enforcement in ToolNode** (Phase 7)
+  Add `requiresConfirmation` boolean to `ToolRecord`. Set from JSON loader.
+  `ToolNode` pauses loop and returns a confirmation prompt before dispatching.
+  Affects: `make_phone_call`, `send_sms` (and any future destructive tools).
 
 - [ ] **lineage-22.2 re-sync** (do at uni, fast connection, ~3hrs, run in tmux)
-  Nothing Phone 2 (Pong) target requires 22.2. All JarvisOS code is pure Java — no conflicts expected.
 
 - [ ] **On-device test on ARM hardware**
-  x86_64 emulators cannot load Cactus. Minimum: Android 14 ARM device.
-  Test path: boot → JarvisService starts → CactusWrapper.init() succeeds →
-  processQuery() runs JarvisExecutor → RouterNode routes correctly.
+  Boot → JarvisService starts → curated tools loaded → 3 chaining scenarios from AGENTIC_LOOP.md.
 
 ---
 
 ## Key facts (carry forward)
 
-- Cactus JNI: `Java_com_android_server_jarvis_inference_CactusWrapper_*`
-- JarvisExecutor is the entry point for all queries — JarvisService no longer dispatches directly
-- RouterNode is deterministic, no model call — `<|tool_call|>` token boundary check only
-- maxTurns = 5 (parent sessions), 2 (sub-agent sessions) — do NOT raise without hardware profiling
-- DreamWorker runs nightly, charging only — first run consolidates any sessions from testing
-- Multimodal API is wired end-to-end; CactusWrapper calls are the only missing piece
-- No Kotlin in system_server
-- x86_64 emulators cannot load Cactus — ARM hardware only
+- Tool routing is unified: all sources (JSON, manifest, system) → ObjectBox ToolRecord → single HNSW index. Source only matters at dispatch time via `receiverClass` prefix.
+- `@system/` prefix → SystemToolExecutor (in-process). No broadcast, no APK needed.
+- `"primary"` model entry uses `chatOnly=true` — no index, only modelHandle required for `isReady()`.
+- `make_phone_call` has `requires_confirmation: true` in JSON — not enforced yet (Phase 7).
+- Tool descriptions must include natural language trigger words for FunctionGemma 270M zero-shot.
+- Chaining works via existing JarvisExecutor — no new infrastructure needed.
+- x86_64 emulators cannot load Cactus — ARM hardware only.
