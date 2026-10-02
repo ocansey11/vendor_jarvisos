@@ -80,3 +80,7 @@ reading the logs, and writing the commits and documents. Concretely:
 | 15:48 | Boot 3: replies work; errors hidden, test script wrong |
 | 15:52 | Boot 4: 22 of 22; database survives a reboot |
 | 16:00 | Everything committed and pushed |
+| 16:35 | Phone ROM rebuilt with the emulator fixes (r2) |
+| 22:28 | rclone sign-in to Google Drive started on the server |
+| 23:25 | Sign-in works; ROM upload rejected by Google rate limit on rclone's shared app |
+| 23:35 | Upload abandoned; Kevin to pull the ROM to his PC with `scp` |

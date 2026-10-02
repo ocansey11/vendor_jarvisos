@@ -494,3 +494,29 @@ notes; entries 7 onward were written as they happened.
   matters more for an agent than for a person: it is the only way the model
   can fix its own call.
 
+
+## 19. Getting a 1.65 GB ROM off the server
+
+- **When:** 2 Oct 2026, 16:35 to 23:35.
+- **Context:** the phone ROM was rebuilt at 16:35 with the day's emulator
+  fixes (`lineage-22.2-20261002-JARVIS-Pong-r2.zip`). Kevin wanted it in his
+  Google Drive folder.
+- **What happened:**
+  1. The Drive connector in Claude only takes small text files. The checksum
+     file went up that way; the ROM could not.
+  2. rclone was installed. Google sign-in needs a browser, and the server has
+     none. The sign-in link points at the server's own `127.0.0.1`, so it was
+     resolved on the server and the Google link handed to Kevin instead.
+     Kevin also ran the command himself and got `bind: address already in
+     use`, because the agent's attempt was still holding the port.
+  3. Sign-in worked and a small test file uploaded. The ROM uploaded to 100%
+     and was then rejected at the final step, every time, with
+     `Error 403: Quota exceeded ... rateLimitExceeded`. The limit is on
+     rclone's shared Google app, not on Kevin's account (86 GB free).
+- **Outcome:** not solved from the server. Kevin's suggestion was the simple
+  one: pull the file to his own PC with `scp`. Direct upload would need his
+  own Google API credentials for rclone.
+- **Proven to:** sign-in and small writes work; large uploads through the
+  shared rclone app do not. Whether the `scp` download was done is not known.
+- **For the talk:** seven hours after the code worked, the remaining problem
+  was moving a file. The user's one-line idea beat the agent's tooling.
