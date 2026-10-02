@@ -166,9 +166,11 @@ up at that point, so asking for storage volumes returned nothing. Services
 that need something later are told when it is ready through boot phases
 (`onBootPhase`), which is where work that depends on other services belongs.
 
-`SystemServer` wraps each service start in its own `try`/`catch`. That is why
-Android still booted: it logged "BOOT FAILURE starting Jarvis Service" and
-carried on without it.
+The code in `SystemServer` that starts Jarvis is wrapped in its own
+`try`/`catch`, as it is for most optional services. That is why Android still
+booted: it logged "BOOT FAILURE starting Jarvis Service" and carried on
+without it. (Core services such as the activity manager are not wrapped; if
+one of those fails, the device does not boot.)
 
 *Explains:* 13.
 *Ask yourself:* why did the phone boot normally even though a system service
