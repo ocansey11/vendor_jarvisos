@@ -29,6 +29,13 @@ PRODUCT_PACKAGES += \
     libcactus \
     libobjectbox-jni
 
+# Products that enforce a generic /system (the emulator and Cuttlefish
+# targets) need the JarvisOS additions listed explicitly.
+PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST += \
+    system/etc/jarvisos/tools/% \
+    system/lib64/libcactus.so \
+    system/lib64/libobjectbox-jni.so
+
 # ---------------------------------------------------------------------------
 # JarvisOS system service — services.jarvis is linked into services.jar via
 # static_libs in frameworks/base/services/Android.bp; nothing to declare here.
