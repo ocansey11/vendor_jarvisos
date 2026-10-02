@@ -1,0 +1,7 @@
+# Binder services published by JarvisService in system_server.
+#
+# system_api_service (not app_api_service): only platform/privileged callers may
+# look these up. JarvisService does not enforce a permission on its Binder calls
+# yet, so opening this to third-party apps would expose RAG over the user's files.
+type jarvis_service, system_api_service, system_server_service, service_manager_type;
+type jarvis_tools_service, system_api_service, system_server_service, service_manager_type;

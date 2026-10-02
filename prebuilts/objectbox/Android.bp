@@ -1,9 +1,13 @@
 // ObjectBox prebuilt libraries for JarvisOS
 
-// Core ObjectBox Java library
+// Core ObjectBox Java library. objectbox-java-api carries the annotations
+// (@Entity, @Id, ...) that objectbox-java and the entity classes compile against.
 java_import {
     name: "objectbox-java",
-    jars: ["lib/java/objectbox-java-4.0.3.jar"],
+    jars: [
+        "lib/java/objectbox-java-4.0.3.jar",
+        "lib/java/objectbox-java-api-4.0.3.jar",
+    ],
     sdk_version: "current",
 }
 

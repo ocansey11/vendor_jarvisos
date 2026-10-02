@@ -1,0 +1,2 @@
+jarvis                                    u:object_r:jarvis_service:s0
+jarvis_tools                              u:object_r:jarvis_tools_service:s0
