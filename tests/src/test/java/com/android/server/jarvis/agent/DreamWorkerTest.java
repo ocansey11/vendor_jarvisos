@@ -28,8 +28,8 @@ class DreamWorkerTest {
 
     @BeforeEach
     void setUp() {
-        // DreamWorker constructor needs Context + WorkerParameters (stubs)
-        dreamWorker = new DreamWorker(null, null);
+        // DreamWorker constructor only needs a Context
+        dreamWorker = new DreamWorker(null);
     }
 
     // -------------------------------------------------------------------------
