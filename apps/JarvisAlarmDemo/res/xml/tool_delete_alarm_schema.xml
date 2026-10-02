@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<params>
+    <param name="hour" type="integer" required="true" description="Hour in 24-hour format, 0 to 23" />
+    <param name="minute" type="integer" required="true" description="Minute, 0 to 59" />
+</params>

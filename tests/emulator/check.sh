@@ -4,6 +4,7 @@ ADB=~/android/lineage/out/host/linux-x86/bin/adb
 sh() { $ADB shell "$@" 2>&1; }
 echo "== boot";          sh getprop sys.boot_completed; sh getprop ro.build.fingerprint; sh uptime
 echo "== system_server"; sh 'pidof system_server; getprop sys.system_server.start_count 2>/dev/null'
+echo "== status";        sh cmd jarvis status
 echo "== services";      sh 'service list | grep -i jarvis'
 echo "== isReady (code 4)";     sh service call jarvis 4
 echo "== processQuery (code 1)"; sh 'service call jarvis 1 s16 "hello jarvis"'

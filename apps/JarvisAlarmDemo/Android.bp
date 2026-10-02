@@ -1,0 +1,8 @@
+// Sample Jarvis-aware app: a toy alarm list that exposes three tools.
+// A test fixture and a template, not part of the ROM. Build and install with:
+//   m JarvisAlarmDemo && adb install -r $ANDROID_PRODUCT_OUT/system/app/JarvisAlarmDemo/JarvisAlarmDemo.apk
+android_app {
+    name: "JarvisAlarmDemo",
+    srcs: ["src/**/*.java"],
+    sdk_version: "current",
+}

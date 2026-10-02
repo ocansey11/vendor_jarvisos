@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.jarvisos.demo.alarms">
+
+    <application android:label="Jarvis Alarm Demo">
+
+        <activity android:name=".AlarmListActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- One receiver per tool: Jarvis reads the name, description and
+             parameter schema from each receiver's meta-data. -->
+
+        <receiver android:name=".ListAlarmsTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="demo_list_alarms" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="List the alarms that are currently set, with their times and labels. Use this to check whether an alarm already exists." />
+        </receiver>
+
+        <receiver android:name=".SetAlarmTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="demo_set_alarm" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="Set an alarm for a time of day. If an alarm for that time already exists, nothing is changed and the reply says so." />
+            <meta-data android:name="com.jarvisos.tool.input_schema"
+                android:resource="@xml/tool_set_alarm_schema" />
+        </receiver>
+
+        <receiver android:name=".DeleteAlarmTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="demo_delete_alarm" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="Delete the alarm set for a time of day. If there is no alarm at that time, nothing is changed and the reply says so." />
+            <meta-data android:name="com.jarvisos.tool.input_schema"
+                android:resource="@xml/tool_delete_alarm_schema" />
+        </receiver>
+
+    </application>
+</manifest>
