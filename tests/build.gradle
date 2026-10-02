@@ -21,7 +21,7 @@ sourceSets {
     test {
         java {
             srcDirs = [
-                '../../../frameworks/base/services/core/java',
+                '../../../frameworks/base/services/jarvis/java',
                 'src/test/java'
             ]
             // Only compile the files the agent tests actually need.
@@ -38,6 +38,10 @@ sourceSets {
             include 'com/android/server/jarvis/tools/ToolRecord.java'
             include 'com/android/server/jarvis/tools/AppRecord_.java'
             include 'com/android/server/jarvis/tools/ToolRecord_.java'
+            include 'com/android/server/jarvis/tools/AppRecordCursor.java'
+            include 'com/android/server/jarvis/tools/ToolRecordCursor.java'
+            include 'com/android/server/jarvis/core/MyObjectBox.java'
+            include 'com/android/server/jarvis/core/JarvisScheduler.java'
         }
     }
 }
