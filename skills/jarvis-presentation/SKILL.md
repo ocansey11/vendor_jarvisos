@@ -10,10 +10,22 @@ it is not the architecture, it is the sequence of things that went wrong and
 what each one taught. This skill keeps that sequence, with the exact code
 before and after, so it can be turned into slides or a narrative on request.
 
-The record lives in `references/roadblocks.md`. Read it before answering
-anything about the timeline; do not reconstruct the story from memory.
+Three reference files hold the material. Read the relevant one before
+answering; do not reconstruct the story from memory.
 
-## Two jobs
+- `references/roadblocks.md` — every roadblock in order, with the error text
+  and the before/after code.
+- `references/how-it-was-built.md` — who did what. Kevin directed the work and
+  made the decisions; Claude (Claude Code on the build server) did the
+  hands-on building, fixing and testing. It also lists what Claude got wrong.
+  Use it whenever the talk touches on how the project was actually built, and
+  keep that account straight: do not present Claude's work as Kevin's typing,
+  or Kevin's decisions as Claude's.
+- `references/concepts.md` — plain-language explanations of the technical
+  ideas behind each roadblock, written for Kevin to learn from, each with a
+  question to check his understanding.
+
+## Three jobs
 
 ### 1. Telling the story
 
@@ -68,5 +80,29 @@ them out would make the timeline misleading.
 When a fix is later proven at a higher level (for example the phone arrives),
 update the entry's "Proven to" line rather than adding a new entry.
 
-The file is in the `vendor_jarvisos` repo, so commit changes to it along with
-the work they describe.
+After a working session, add a dated section to
+`references/how-it-was-built.md` in the same style: what Kevin decided, what
+Claude did, what went wrong on Claude's side. If a new roadblock rests on an
+idea that `references/concepts.md` does not cover, add a section there too.
+
+The files are in the `vendor_jarvisos` repo, so commit changes to them along
+with the work they describe.
+
+### 3. Helping Kevin learn the material
+
+Kevin wants to understand the technical side well enough to present it and
+take questions. When he asks to review, revise, be quizzed, or "explain X
+again":
+
+- Work from `references/concepts.md`. Each section ends with a question; ask
+  it, let him answer in his own words, then fill in what was missing rather
+  than reciting the section back.
+- Tie every explanation to the roadblock it came from. He was there for the
+  failure, so the concrete case is the fastest way in.
+- If he explains something on a slide in a way that is not quite right, say
+  so plainly and give the correct version. A small inaccuracy is easy to fix
+  in rehearsal and awkward to be caught on in front of an audience.
+- Likely audience questions are worth rehearsing: "what has actually run on a
+  phone?" (nothing yet), "how much of this did the AI write?" (see
+  `how-it-was-built.md`), "why not just make it an app?" (section 1 of the
+  concepts).
