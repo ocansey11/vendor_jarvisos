@@ -100,3 +100,36 @@ reading the logs, and writing the commits and documents. Concretely:
   tied the code is to Cactus and ObjectBox, and wrote up the answers.
 - **Claude's slips:** the first demo run went ahead without checking the app
   was still installed, so it printed five errors before the cause was found.
+
+## 5 Oct 2026, evening: the Jarvis app
+
+- **Kevin** asked for "the app for jarvis, as we discussed", then checked in
+  once on how long the build would take.
+- **Claude** found the proposal in `vision.md` section 2 and built it: the
+  signature permission on the service (entry 22), `callTool` and `getStatus`
+  on the Binder interfaces and `JarvisManager`, and the app itself
+  (`apps/Jarvis`: Chat tab, Tools tab with a form generated from each tool's
+  declared parameters). Wrote `tests/emulator/jarvis-app.sh`.
+- **Result on the emulator:** 16 of 16 app checks, the older 22 of 22 tool
+  checks still pass. An alarm was set from the app's form with no typed
+  commands. Chat sends and shows the service's reply, which without a model
+  is "I wasn't able to generate a response."
+- **Claude's slips:** a build estimate of 25 minutes that took 44 (entry 23);
+  a chat layout that hid the conversation behind the keyboard (entry 24); a
+  `pkill` pattern that matched its own shell and killed the restart command;
+  two faults in its own new test script (it looked for a tool that had
+  scrolled off screen, and checked the app's path in a way that broke after
+  an update). The older tool-check script also turned out to have a
+  race: it failed one check whenever the demo app was already installed,
+  because it did not wait for Jarvis to drop the tools after uninstalling.
+
+| Time | Event |
+|------|-------|
+| 18:26 | "can we do the app for jarvis?" |
+| 18:31 | Service changes and app written; emulator image build starts |
+| 19:15 | Build finishes (44 min) |
+| 19:17 | First run: 15 of 16; chat hidden by the keyboard |
+| 19:20 | Chat fixed; 22 of 22 tool checks still pass |
+| 19:23 | Tool form fixed; alarm set from the app |
+| 19:27 | 16 of 16; image rebuilt with the fixes |
+| 19:32 | Rebooted on the new image: 16 of 16 and 22 of 22 with the app built in |

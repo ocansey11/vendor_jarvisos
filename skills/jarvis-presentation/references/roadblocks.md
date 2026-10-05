@@ -27,6 +27,12 @@ notes; entries 7 onward were written as they happened.
 16. Any app could have triggered any other app's tools
 17. A prediction that was wrong
 18. The test was wrong, and the service hid it
+19. Getting a 1.65 GB ROM off the server
+20. The PIN screen went black
+21. The demo app had vanished
+22. Anyone with a shell could ask Jarvis anything
+23. A "25 minute" build that took 44
+24. The keyboard covered the conversation, and the Run button
 
 ---
 
@@ -446,6 +452,12 @@ notes; entries 7 onward were written as they happened.
   system is not the same as running it.
 
 ## 18. The test was wrong, and the service hid it
+19. Getting a 1.65 GB ROM off the server
+20. The PIN screen went black
+21. The demo app had vanished
+22. Anyone with a shell could ask Jarvis anything
+23. A "25 minute" build that took 44
+24. The keyboard covered the conversation, and the Run button
 
 - **When:** 2 Oct 2026, 15:48. Third emulator boot, after a 22-minute rebuild.
 - **Expected:** with entry 15 fixed, all sample-app checks would pass.
@@ -559,3 +571,89 @@ notes; entries 7 onward were written as they happened.
 - **Proven to:** emulator.
 - **For the talk:** the reinstall doubled as a test nobody planned: tool
   discovery on install worked on a clean phone.
+
+## 22. Anyone with a shell could ask Jarvis anything
+
+- **When:** 5 Oct 2026, 18:30, while building the Jarvis app. Known since the
+  port (it was a `TODO` in the code), closed now because the app needed it.
+- **What happened:** the two Binder services checked nothing about the caller.
+  From an ordinary `adb shell`, before the fix:
+
+  ```
+  $ service call jarvis_tools 1          # listTools()
+  Result: Parcel( 00000000 00003764 '....d7..[.{.".i.d.".:.1.,.".t.o.o.l.N.a.m.e...'
+  $ service call jarvis 1 s16 hello      # processQuery("hello")
+  Result: Parcel( 00000000 00000037 '....7...I. .w.a.s.n.'.t. .a.b.l.e...'
+  ```
+- **Before** (`JarvisService.java`):
+
+  ```java
+  private void enforceCallingPermission() {
+      final int callingUid = Binder.getCallingUid();
+      Log.d(TAG, "Called by UID: " + callingUid);
+      // TODO: mContext.enforceCallingPermission("android.permission.ACCESS_JARVIS_SERVICE", "...");
+  }
+  ```
+- **After:** a signature-level permission declared in the framework manifest,
+  held only by apps signed with the platform key (the Jarvis app), and
+  enforced on every call:
+
+  ```xml
+  <permission android:name="android.permission.ACCESS_JARVIS_SERVICE"
+      android:protectionLevel="signature" />
+  ```
+  ```java
+  private void enforceCallingPermission() {
+      mContext.enforceCallingOrSelfPermission(PERMISSION, "jarvis");
+  }
+  ```
+  The same two commands now return an exception (`ffffffff ...`) instead of
+  data. `cmd jarvis ...` still works for the shell: it has its own shell/root
+  check and no longer goes through the Binder method.
+- **Proven to:** emulator (`tests/emulator/jarvis-app.sh`, "Callers without
+  the permission").
+- **For the talk:** SELinux already kept third-party apps out, so this was a
+  second lock, not the only one. The shell got in because SELinux lets it
+  look up almost any service. One layer of defence looked like enough until
+  somebody tried the door.
+
+## 23. A "25 minute" build that took 44
+
+- **When:** 5 Oct 2026, 18:31 to 19:15.
+- **Predicted:** Claude told Kevin about 25 minutes, from the note that a
+  change to `core/res/AndroidManifest.xml` cost about that on 2 Oct.
+- **What happened:** 15 minutes in, the build was at 27% of 13,110 steps and
+  estimating 1h37m more. Kevin asked "how many minutes more"; the revised
+  answer was "an hour, possibly 1h30". It finished 29 minutes after that.
+- **Cause:** adding a permission changes the framework's resource package,
+  and every app in the image is re-linked against it. Both estimates were
+  wrong, in opposite directions.
+- **For the talk:** one line of XML, 13,000 build steps. And ninja's
+  early "time remaining" is no better than a person's guess.
+
+## 24. The keyboard covered the conversation, and the Run button
+
+- **When:** 5 Oct 2026, 19:17 and 19:21, first runs of the Jarvis app on the
+  emulator.
+- **Expected:** type "hello" in Chat, see "hello" and the reply.
+- **What happened:** the automated check "the question appears in the
+  conversation" failed. A screenshot showed why: with the keyboard up, the
+  "no model loaded" notice and the text box used all the height, and the
+  conversation was a sliver a few pixels tall. In the tool form the same
+  keyboard covered the Run and Close buttons.
+- **How it was found:** the first by the test script, then a screenshot; the
+  second only by looking at a screenshot, after a tap meant for Run landed on
+  the keyboard and typed "gymnasium" into the alarm label.
+- **Fix:** the notice became the first row of the conversation, so it scrolls
+  away (`item_chat_notice.xml`, added with `ListView.addHeaderView`); the
+  tool form's window now resizes for the keyboard:
+
+  ```java
+  dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+  ```
+- **Proven to:** emulator (16 of 16 app checks; alarm set through the form,
+  then "already exists. Nothing was changed." on the second press).
+- **For the talk:** the app compiled, installed and passed 15 of 16 checks
+  while being unusable for its main purpose on a small screen.
+  Screenshots of the fixed app are in `assets/2026-10-05-jarvis-app-*.png`
+  (none was kept of the broken layout).

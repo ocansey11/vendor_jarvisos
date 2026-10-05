@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Jarvis</string>
+    <string name="tab_chat">Chat</string>
+    <string name="tab_tools">Tools</string>
+
+    <string name="status_checking">Checking the Jarvis service…</string>
+    <string name="status_unavailable">The Jarvis service is not running on this device.</string>
+    <string name="status_denied">This app is not allowed to use the Jarvis service.</string>
+    <string name="status_starting">The Jarvis service is still starting.</string>
+    <string name="status_ready">Service ready · %1$d tools · %2$s</string>
+    <string name="status_model_ready">model loaded</string>
+    <string name="status_model_missing">no model loaded</string>
+
+    <string name="chat_no_model">No language model is loaded, so Jarvis cannot answer questions yet. Tools still work: try the Tools tab.</string>
+    <string name="chat_hint">Ask Jarvis</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_thinking">Thinking…</string>
+    <string name="chat_empty">Nothing asked yet.</string>
+
+    <string name="tools_empty">No tools are registered.</string>
+    <string name="tools_builtin">Built into JarvisOS</string>
+    <string name="tool_no_params">This tool takes no arguments.</string>
+    <string name="tool_required">required</string>
+    <string name="tool_optional">optional</string>
+    <string name="tool_run">Run</string>
+    <string name="tool_running">Running…</string>
+    <string name="tool_close">Close</string>
+    <string name="tool_bad_number">Not a number</string>
+</resources>

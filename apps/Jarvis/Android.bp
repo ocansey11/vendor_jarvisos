@@ -1,0 +1,13 @@
+// The Jarvis app: the on-screen way to talk to the Jarvis system service.
+// Part of the ROM (PRODUCT_PACKAGES in jarvisos.mk). Signed with the platform
+// key because android.permission.ACCESS_JARVIS_SERVICE is signature-only, and
+// built against the platform because android.jarvis.* is @hide.
+// To update it on a running emulator without a full image build:
+//   m Jarvis && adb install -r $ANDROID_PRODUCT_OUT/system/app/Jarvis/Jarvis.apk
+android_app {
+    name: "Jarvis",
+    srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
+    platform_apis: true,
+    certificate: "platform",
+}

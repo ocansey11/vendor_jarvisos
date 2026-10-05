@@ -21,7 +21,12 @@ refuse() {   # refuse "what" "substring that must be absent" "actual output"
 tool() { "$ADB" shell "cmd jarvis tool $1 '${2:-}'" 2>&1 | tr -d '\r'; }
 
 [ -f "$APK" ] || { echo "JarvisAlarmDemo.apk not built (m JarvisAlarmDemo)"; exit 2; }
-"$ADB" uninstall $PKG >/dev/null 2>&1
+# If it was installed, give Jarvis a moment to drop its tools.
+if "$ADB" uninstall $PKG >/dev/null 2>&1; then
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        "$ADB" shell cmd jarvis tools | grep -q demo_set_alarm || break; sleep 1
+    done
+fi
 
 echo "Discovery"
 refuse "tools absent before install" "demo_set_alarm" "$("$ADB" shell cmd jarvis tools)"

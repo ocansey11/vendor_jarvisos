@@ -73,11 +73,13 @@ tmux new -d -s build vendor/jarvisos/tests/emulator/build.sh   # full image, 1-3
 tmux new -d -s emu   vendor/jarvisos/tests/emulator/run.sh     # headless boot
 vendor/jarvisos/tests/emulator/check.sh                        # once it has booted
 m JarvisAlarmDemo && vendor/jarvisos/tests/emulator/app-tools.sh   # app-tool path, 22 checks
+vendor/jarvisos/tests/emulator/jarvis-app.sh                   # the Jarvis app, 16 checks
 ```
 
 `check.sh` prints, in order: whether boot completed; whether `system_server`
 is alive; whether the `jarvis` and `jarvis_tools` services are registered; the
-replies to `isReady`, `processQuery`, `isIndexed` and `listTools`; the files
+replies to `isReady`, a query and the tool list (through `cmd jarvis`, since
+the shell is refused on the Binder methods themselves); the files
 under `/data/system/jarvis`; the Jarvis lines from logcat; any crash; and any
 SELinux denial involving `system_server`.
 
@@ -87,6 +89,13 @@ calls its tools through `adb shell cmd jarvis tool NAME 'JSON'`, which
 bypasses the model. It is also the template for a Jarvis-aware app: one
 exported receiver per tool, a read tool for current state, and write tools
 that report "already exists" instead of repeating the action.
+
+`jarvis-app.sh` drives the built-in Jarvis app (`apps/Jarvis`) by reading the
+screen and tapping: the app holds `ACCESS_JARVIS_SERVICE` and the shell is
+refused without it; the status line matches `cmd jarvis status`; a tool run
+from the Tools tab shows its reply; a message typed in Chat shows the
+service's own reply. To try a change to the app without an image build:
+`m Jarvis && adb install -r $ANDROID_PRODUCT_OUT/system/app/Jarvis/Jarvis.apk`.
 
 Expected on the emulator: the store opens and tools load, the three models
 report "not ready" (no Cactus on x86_64, and no model files), and queries
@@ -104,7 +113,7 @@ newer.
 |-------|--------|
 | 1. ObjectBox store test | **36 of 36 checks pass** (ObjectBox 4.0.2 native, Linux x86_64) |
 | 2. Unit tests | **29 of 29 pass** (DreamWorker 9, RouterNode 12, ToolNodeParsing 8) |
-| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below |
+| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **16 of 16** (`tests/emulator/jarvis-app.sh`) |
 | 4. Phone | no device yet |
 
 Layer 3 in detail (third and fourth boots, 15:52–15:54):

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- First row of the conversation, so it scrolls away with it and leaves
+     the room to the messages when the keyboard is up. The wrapper stays;
+     the notice inside is what gets hidden. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/chat_notice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/notice"
+        android:padding="12dp"
+        android:text="@string/chat_no_model"
+        android:textColor="@color/on_notice"
+        android:textSize="14sp"
+        android:visibility="gone" />
+</FrameLayout>

@@ -53,6 +53,12 @@ Proposed: a "Jarvis" system app built into the ROM.
 Suggested order: Jarvis app + Tools screen → structured tool replies → Cactus
 model fix → chat → voice.
 
+**Built 5 Oct 2026 (evening), seen working on the emulator:** the app
+(`vendor/jarvisos/apps/Jarvis`), both screens, and the permission check
+(roadblocks entry 22). The Chat screen sends and shows the service's reply,
+but no model has run, so it has never shown an answer. Tool replies are still
+plain text; the cards of section 4 are not started.
+
 ## 3. Why apps "talk to each other" through Jarvis
 
 Kevin asked why apps from different companies would need to talk in real time.

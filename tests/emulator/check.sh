@@ -7,9 +7,11 @@ echo "== system_server"; sh 'pidof system_server; getprop sys.system_server.star
 echo "== status";        sh cmd jarvis status
 echo "== services";      sh 'service list | grep -i jarvis'
 echo "== isReady (code 4)";     sh service call jarvis 4
-echo "== processQuery (code 1)"; sh 'service call jarvis 1 s16 "hello jarvis"'
-echo "== isIndexed (code 3)";   sh 'service call jarvis 3 s16 "/sdcard/Documents/none.txt"'
-echo "== listTools (jarvis_tools code 1)"; sh 'service call jarvis_tools 1' | head -40
+# The shell does not hold ACCESS_JARVIS_SERVICE, so the remaining Binder
+# methods refuse it; `cmd jarvis` is the shell's way in.
+echo "== query";   sh 'cmd jarvis query "hello jarvis"'
+echo "== tools";   sh cmd jarvis tools | head -40
+echo "== Binder without the permission (expect ffffffff)"; sh 'service call jarvis_tools 1' | head -2
 echo "== files";         $ADB root >/dev/null 2>&1; sleep 2; sh 'ls -laZR /data/system/jarvis 2>&1 | head -40; ls -la /system/lib64/libobjectbox-jni.so /system/lib64/libcactus.so /system/etc/jarvisos/tools 2>&1 | head -30'
 echo "== logcat (jarvis)"; $ADB logcat -d 2>/dev/null | grep -iE 'jarvis|objectbox|cactus|ToolScanner|ToolDispatcher|DreamWorker|ModelRegistry|Box\[' | grep -v 'service call' | cut -c1-330 | head -150
 echo "== fatal / wtf in system_server"; $ADB logcat -d -b crash 2>/dev/null | cut -c1-300 | head -60
