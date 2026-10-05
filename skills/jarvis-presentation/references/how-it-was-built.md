@@ -84,3 +84,19 @@ reading the logs, and writing the commits and documents. Concretely:
 | 22:28 | rclone sign-in to Google Drive started on the server |
 | 23:25 | Sign-in works; ROM upload rejected by Google rate limit on rclone's shared app |
 | 23:35 | Upload abandoned; Kevin to pull the ROM to his PC with `scp` |
+
+## 5 Oct 2026: first look at the emulator, and the big questions
+
+- **Kevin** viewed the emulator from his PC (scrcpy over an SSH tunnel),
+  asked for the alarm demo, showed it to Desmond, and then asked the
+  direction questions: an interface for Jarvis, voice, why apps talk to each
+  other, dynamic UI, future-proof use cases, niche industries. He raised the
+  biggest strategic point himself: reliance on Cactus and ObjectBox, "we may
+  need to build our own". All of it is recorded in `vision.md`.
+- **Claude** wrote the step-by-step instructions for scrcpy, got the emulator
+  through setup from the server when the PIN screen went black (entry 20),
+  reinstalled the demo app and ran the demo twice (entry 21), checked the
+  Cactus source and Hugging Face for what inference would need, measured how
+  tied the code is to Cactus and ObjectBox, and wrote up the answers.
+- **Claude's slips:** the first demo run went ahead without checking the app
+  was still installed, so it printed five errors before the cause was found.

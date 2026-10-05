@@ -517,6 +517,45 @@ notes; entries 7 onward were written as they happened.
   one: pull the file to his own PC with `scp`. Direct upload would need his
   own Google API credentials for rclone.
 - **Proven to:** sign-in and small writes work; large uploads through the
-  shared rclone app do not. Whether the `scp` download was done is not known.
+  shared rclone app do not. Kevin then pulled the zip with `scp`, uploaded it
+  to Drive himself and shared it with his group (confirmed 2 Oct 2026).
 - **For the talk:** seven hours after the code worked, the remaining problem
   was moving a file. The user's one-line idea beat the agent's tooling.
+
+## 20. The PIN screen went black
+
+- **When:** 5 Oct 2026, about 00:45. Kevin viewing the emulator from his
+  Windows PC with scrcpy over an SSH tunnel, for the first time.
+- **Expected:** click through Android's first-time setup and reach the home
+  screen.
+- **What happened:** at "choose a screen lock" the screen turned black and
+  stayed black.
+- **How it was found:** on the server, `dumpsys window` showed the PIN screen
+  was open and waiting with the keyboard up; its window flags included
+  `SECURE`.
+- **Cause:** not a bug. Android marks password and PIN screens `FLAG_SECURE`,
+  which makes screen capture (scrcpy, screenshots) show black, so other apps
+  cannot record a password being typed.
+- **Fix:** Claude drove the setup from the server with `adb` (`uiautomator
+  dump` to find buttons, `input tap` to press them): Skip on the PIN screen,
+  Skip on the warning, then through to the home screen. No code change.
+- **Proven to:** emulator.
+- **For the talk:** a security feature looked exactly like a crash. Checking
+  what the system thinks is on screen beat guessing from what the viewer
+  shows.
+
+## 21. The demo app had vanished
+
+- **When:** 5 Oct 2026, about 00:53, when Kevin asked to watch the alarm demo.
+- **What happened:** every call failed with `Error: tool 'demo_list_alarms'
+  not registered`.
+- **Cause:** the emulator had started with a fresh, empty phone (the same
+  reason the setup screens appeared), and the demo app had only ever been
+  installed by hand with `adb install`, not built into the emulator image.
+- **Fix:** reinstalled the APK; Jarvis registered the three tools on its own
+  within seconds, and the demo then ran: list, set 07:30, set again ("already
+  exists. Nothing was changed."), list, and a missing-argument error. Run
+  twice, the second time for Desmond.
+- **Proven to:** emulator.
+- **For the talk:** the reinstall doubled as a test nobody planned: tool
+  discovery on install worked on a clean phone.

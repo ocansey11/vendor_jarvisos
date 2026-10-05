@@ -24,6 +24,11 @@ answering; do not reconstruct the story from memory.
 - `references/concepts.md` — plain-language explanations of the technical
   ideas behind each roadblock, written for Kevin to learn from, each with a
   question to check his understanding.
+- `references/vision.md` — where Jarvis goes next: an interface, dynamic UI,
+  voice, use cases, niche industries, and the dependency on Cactus and
+  ObjectBox (Kevin's "we may need to build our own"). Use it for the "what's
+  next" and "who is this for" parts of the talk. These are ideas, not results;
+  keep that clear on any slide.
 
 ## Three jobs
 
@@ -105,4 +110,5 @@ again":
 - Likely audience questions are worth rehearsing: "what has actually run on a
   phone?" (nothing yet), "how much of this did the AI write?" (see
   `how-it-was-built.md`), "why not just make it an app?" (section 1 of the
-  concepts).
+  concepts), "what if Cactus or ObjectBox goes away?" and "who is this for?"
+  (sections 10 and 9 of `vision.md`).
