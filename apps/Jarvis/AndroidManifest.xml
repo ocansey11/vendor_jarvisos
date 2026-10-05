@@ -3,6 +3,8 @@
     package="com.jarvisos.app">
 
     <uses-permission android:name="android.permission.ACCESS_JARVIS_SERVICE" />
+    <!-- To show the icon of each app that owns tools. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <application
         android:label="@string/app_name"

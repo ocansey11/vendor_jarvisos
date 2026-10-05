@@ -1,18 +1,20 @@
 package com.jarvisos.app;
 
 import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.jarvis.JarvisManager;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.BaseAdapter;
+import android.widget.BaseExpandableListAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ExpandableListView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import org.json.JSONException;
@@ -22,39 +24,43 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The Tools tab: every tool in the registry under the app that owns it. Tapping
- * one opens a form built from the tool's declared parameters; Run calls the
- * tool through the service, with no model involved, and shows its reply.
+ * The Tools tab: the apps that own tools, each opening to show its tools, the
+ * way the registry stores them (one AppRecord, many ToolRecords). Tapping a
+ * tool opens a form built from its declared parameters; Run calls the tool
+ * through the service, with no model involved, and shows its reply.
  */
 class ToolsScreen {
 
     private static final String TAG = "JarvisApp";
 
     private final MainActivity mActivity;
-    /** Tools, with a null before each group to stand for its header row. */
-    private final List<Tool> mRows = new ArrayList<>();
+    /** One entry per owning app, each holding that app's tools. */
+    private final List<List<Tool>> mApps = new ArrayList<>();
     private final TextView mEmpty;
 
     ToolsScreen(MainActivity activity) {
         mActivity = activity;
         mEmpty = activity.findViewById(R.id.tools_empty);
-        ListView list = activity.findViewById(R.id.tools_list);
+        ExpandableListView list = activity.findViewById(R.id.tools_list);
         list.setAdapter(mAdapter);
-        list.setOnItemClickListener((parent, view, position, id) -> open(mRows.get(position)));
+        list.setOnChildClickListener((parent, view, app, tool, id) -> {
+            open(mApps.get(app).get(tool));
+            return true;
+        });
     }
 
     void load() {
         mActivity.call(JarvisManager::listTools, (json, error) -> {
-            mRows.clear();
+            mApps.clear();
             if (error == null) {
                 try {
-                    String group = null;
+                    String owner = null;
                     for (Tool tool : Tool.parseAll(json)) {
-                        if (!tool.packageName.equals(group)) {
-                            group = tool.packageName;
-                            mRows.add(null);
+                        if (!tool.packageName.equals(owner)) {
+                            owner = tool.packageName;
+                            mApps.add(new ArrayList<>());
                         }
-                        mRows.add(tool);
+                        mApps.get(mApps.size() - 1).add(tool);
                     }
                 } catch (JSONException e) {
                     Log.w(TAG, "Unreadable tool list", e);
@@ -62,7 +68,7 @@ class ToolsScreen {
                 }
             }
             mEmpty.setText(error != null ? error : mActivity.getString(R.string.tools_empty));
-            mEmpty.setVisibility(mRows.isEmpty() ? View.VISIBLE : View.GONE);
+            mEmpty.setVisibility(mApps.isEmpty() ? View.VISIBLE : View.GONE);
             mAdapter.notifyDataSetChanged();
         });
     }
@@ -189,33 +195,47 @@ class ToolsScreen {
         return Math.round(value * mActivity.getResources().getDisplayMetrics().density);
     }
 
-    private final BaseAdapter mAdapter = new BaseAdapter() {
-        @Override public int getCount() { return mRows.size(); }
-        @Override public Object getItem(int position) { return mRows.get(position); }
-        @Override public long getItemId(int position) { return position; }
-        @Override public int getViewTypeCount() { return 2; }
-        @Override public int getItemViewType(int position) { return isEnabled(position) ? 1 : 0; }
-        @Override public boolean areAllItemsEnabled() { return false; }
-        @Override public boolean isEnabled(int position) { return mRows.get(position) != null; }
+    private final BaseExpandableListAdapter mAdapter = new BaseExpandableListAdapter() {
+        @Override public int getGroupCount() { return mApps.size(); }
+        @Override public int getChildrenCount(int app) { return mApps.get(app).size(); }
+        @Override public Object getGroup(int app) { return mApps.get(app); }
+        @Override public Object getChild(int app, int tool) { return mApps.get(app).get(tool); }
+        @Override public long getGroupId(int app) { return app; }
+        @Override public long getChildId(int app, int tool) { return tool; }
+        @Override public boolean hasStableIds() { return false; }
+        @Override public boolean isChildSelectable(int app, int tool) { return true; }
 
         @Override
-        public View getView(int position, View view, ViewGroup parent) {
-            Tool tool = mRows.get(position);
+        public View getGroupView(int app, boolean expanded, View view, ViewGroup parent) {
             if (view == null) {
-                view = mActivity.getLayoutInflater().inflate(tool != null
-                        ? R.layout.item_tool : R.layout.item_tool_header, parent, false);
+                view = mActivity.getLayoutInflater().inflate(R.layout.item_tool_app, parent, false);
             }
-            TextView title = view.findViewById(R.id.title);
-            TextView subtitle = view.findViewById(R.id.subtitle);
-            if (tool != null) {
-                title.setText(tool.name);
-                subtitle.setText(tool.description);
-            } else {
-                Tool first = mRows.get(position + 1);
-                title.setText(first.builtIn
-                        ? mActivity.getString(R.string.tools_builtin) : first.appLabel);
-                subtitle.setText(first.packageName);
+            List<Tool> tools = mApps.get(app);
+            Tool first = tools.get(0);
+            ((TextView) view.findViewById(R.id.title)).setText(first.appLabel);
+            ((TextView) view.findViewById(R.id.subtitle)).setText(first.builtIn
+                    ? mActivity.getString(R.string.tools_builtin) : first.packageName);
+            ((TextView) view.findViewById(R.id.count)).setText(mActivity.getResources()
+                    .getQuantityString(R.plurals.tools_count, tools.size(), tools.size()));
+            ImageView icon = view.findViewById(R.id.icon);
+            try {
+                icon.setImageDrawable(
+                        mActivity.getPackageManager().getApplicationIcon(first.packageName));
+            } catch (PackageManager.NameNotFoundException e) {
+                // Built-in tools belong to no installed package.
+                icon.setImageResource(R.mipmap.ic_launcher);
             }
+            return view;
+        }
+
+        @Override
+        public View getChildView(int app, int tool, boolean last, View view, ViewGroup parent) {
+            if (view == null) {
+                view = mActivity.getLayoutInflater().inflate(R.layout.item_tool, parent, false);
+            }
+            Tool t = mApps.get(app).get(tool);
+            ((TextView) view.findViewById(R.id.title)).setText(t.name);
+            ((TextView) view.findViewById(R.id.subtitle)).setText(t.description);
             return view;
         }
     };

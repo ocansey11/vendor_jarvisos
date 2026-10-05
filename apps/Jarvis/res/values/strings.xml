@@ -20,6 +20,10 @@
 
     <string name="tools_empty">No tools are registered.</string>
     <string name="tools_builtin">Built into JarvisOS</string>
+    <plurals name="tools_count">
+        <item quantity="one">%d tool</item>
+        <item quantity="other">%d tools</item>
+    </plurals>
     <string name="tool_no_params">This tool takes no arguments.</string>
     <string name="tool_required">required</string>
     <string name="tool_optional">optional</string>

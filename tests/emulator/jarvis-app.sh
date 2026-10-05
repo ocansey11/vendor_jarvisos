@@ -59,14 +59,18 @@ expect "chat explains why it cannot answer"  "No language model is loaded" "$UI"
 
 echo "Tools tab"
 tap "Tools"
-# Apps' tools are listed first, so the built-in ones may be below the fold.
+UI="$(screen)"
+expect "apps are listed, closed, with a tool count" "tools\"" "$UI"
+refuse "tools are hidden until their app is opened" "get_battery_status" "$UI"
+tap "JarvisOS System"
+# An app opened above it may have pushed the tool below the fold.
 for i in 1 2 3 4 5 6; do
     UI="$(screen)"
     [[ "$UI" == *'text="get_battery_status"'* ]] && break
     "$ADB" shell input swipe 500 1500 500 900 300; sleep 1
 done
 expect "built-in tools are listed"  "get_battery_status"  "$UI"
-expect "under their own heading"    "Built into JarvisOS" "$UI"
+expect "under the app that owns them" "Built into JarvisOS" "$UI"
 tap "get_battery_status"
 tap "Run"
 sleep 1

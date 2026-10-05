@@ -133,3 +133,14 @@ reading the logs, and writing the commits and documents. Concretely:
 | 19:23 | Tool form fixed; alarm set from the app |
 | 19:27 | 16 of 16; image rebuilt with the fixes |
 | 19:32 | Rebooted on the new image: 16 of 16 and 22 of 22 with the app built in |
+| 20:40 | Kevin: tools should be nested under their apps, as the registry stores them |
+| 20:46 | Tools tab rebuilt as an app list that opens to each app's tools (app-only build, 90 s) |
+
+Kevin's point was about the architecture: `AppRecord` owns many `ToolRecord`s,
+so the screen should show apps first. Claude's first version listed tools flat
+under headings. Still true after the change: the 14 built-in tools all sit
+under one made-up app, "JarvisOS System", because the curated tool files say
+so; and the permissions in `TOOL_REGISTRY.md` (`ACCESS_RAG_SERVICE` for any
+app with user approval, `REGISTER_JARVIS_TOOL` for signed apps) are not what
+the code enforces (`ACCESS_JARVIS_SERVICE`, platform-signed only; any app may
+register tools). Both are open decisions for Kevin.
