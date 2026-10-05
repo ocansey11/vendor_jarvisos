@@ -97,7 +97,23 @@ from the Tools tab shows its reply; a message typed in Chat shows the
 service's own reply. To try a change to the app without an image build:
 `m Jarvis && adb install -r $ANDROID_PRODUCT_OUT/system/app/Jarvis/Jarvis.apk`.
 
-Expected on the emulator: the store opens and tools load, the three models
+**A model on the emulator.** llama.cpp (`vendor/llama.cpp`) is the engine
+there; Cactus is arm64-only. The emulator must be started by `run.sh`, which
+passes `-qemu -cpu host` (the engine needs AVX2 and refuses to load without
+it). Install models through the service, since nothing else may write to its
+folder:
+
+```bash
+adb shell -T cmd jarvis install-model embed < all-MiniLM-L6-v2-Q8_0.gguf
+adb shell -T cmd jarvis install-model chat  < Qwen3-1.7B-Q8_0.gguf
+adb shell cmd jarvis engine          # which engine, and where it looks for models
+adb shell "cmd jarvis query 'set an alarm for 7:30 called gym'"
+```
+
+The test models are in `~/jarvis-models` on the build server. They survive an
+emulator restart; a wiped `/data` needs them installed again.
+
+Expected on the emulator with no model installed: the store opens and tools load, the three models
 report "not ready" (no Cactus on x86_64, and no model files), and queries
 return an error string rather than an answer.
 
@@ -112,8 +128,8 @@ newer.
 | Layer | Result |
 |-------|--------|
 | 1. ObjectBox store test | **36 of 36 checks pass** (ObjectBox 4.0.2 native, Linux x86_64) |
-| 2. Unit tests | **29 of 29 pass** (DreamWorker 9, RouterNode 12, ToolNodeParsing 8) |
-| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **16 of 16** (`tests/emulator/jarvis-app.sh`) |
+| 2. Unit tests | **49 of 49 pass** (DreamWorker 9, RouterNode 12, ToolNodeParsing 8, Completion 10, FlatVectorIndex 10) |
+| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **19 of 19** (`tests/emulator/jarvis-app.sh`). With llama.cpp and a model installed (5 Oct 2026): plain-English requests call tools and get answers, 10 to 26 s each |
 | 4. Phone | no device yet |
 
 Layer 3 in detail (third and fourth boots, 15:52–15:54):

@@ -20,6 +20,8 @@ PRODUCT_COPY_FILES += $(foreach f,$(JARVISOS_TOOL_FILES),\
 # ---------------------------------------------------------------------------
 # Native libraries loaded by system_server
 #   libcactus        → vendor/cactus (CactusWrapper.java)
+#   libllama_jarvis  → vendor/llama.cpp (LlamaEngine.java), with the small
+#                      libllama_jarvis_cpucheck that decides whether to load it
 #   libobjectbox-jni → vendor/jarvisos/prebuilts/objectbox (JarvisStore.java)
 # Nothing else depends on these modules, so they must be listed here to land
 # in /system/lib64.
@@ -27,6 +29,8 @@ PRODUCT_COPY_FILES += $(foreach f,$(JARVISOS_TOOL_FILES),\
 
 PRODUCT_PACKAGES += \
     libcactus \
+    libllama_jarvis \
+    libllama_jarvis_cpucheck \
     libobjectbox-jni
 
 # ---------------------------------------------------------------------------
@@ -42,6 +46,8 @@ PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST += \
     system/app/Jarvis/% \
     system/etc/jarvisos/tools/% \
     system/lib64/libcactus.so \
+    system/lib64/libllama_jarvis.so \
+    system/lib64/libllama_jarvis_cpucheck.so \
     system/lib64/libobjectbox-jni.so
 
 # ---------------------------------------------------------------------------

@@ -33,6 +33,10 @@ notes; entries 7 onward were written as they happened.
 22. Anyone with a shell could ask Jarvis anything
 23. A "25 minute" build that took 44
 24. The keyboard covered the conversation, and the Run button
+25. Building llama.cpp without its own build system
+26. Three bugs that would have stopped any model calling a tool
+27. No way to put a model on the device
+28. "How much battery do I have?" got a lecture instead of an answer
 
 ---
 
@@ -458,6 +462,10 @@ notes; entries 7 onward were written as they happened.
 22. Anyone with a shell could ask Jarvis anything
 23. A "25 minute" build that took 44
 24. The keyboard covered the conversation, and the Run button
+25. Building llama.cpp without its own build system
+26. Three bugs that would have stopped any model calling a tool
+27. No way to put a model on the device
+28. "How much battery do I have?" got a lecture instead of an answer
 
 - **When:** 2 Oct 2026, 15:48. Third emulator boot, after a 22-minute rebuild.
 - **Expected:** with entry 15 fixed, all sample-app checks would pass.
@@ -632,6 +640,10 @@ notes; entries 7 onward were written as they happened.
   early "time remaining" is no better than a person's guess.
 
 ## 24. The keyboard covered the conversation, and the Run button
+25. Building llama.cpp without its own build system
+26. Three bugs that would have stopped any model calling a tool
+27. No way to put a model on the device
+28. "How much battery do I have?" got a lecture instead of an answer
 
 - **When:** 5 Oct 2026, 19:17 and 19:21, first runs of the Jarvis app on the
   emulator.
@@ -657,3 +669,116 @@ notes; entries 7 onward were written as they happened.
   while being unusable for its main purpose on a small screen.
   Screenshots of the fixed app are in `assets/2026-10-05-jarvis-app-*.png`
   (none was kept of the broken layout).
+
+## 25. Building llama.cpp without its own build system
+
+- **When:** 5 Oct 2026, 21:06 to 21:25. Kevin had forked llama.cpp as a
+  second engine beside Cactus (`ocansey11/llama.cpp`).
+- **Expected:** llama.cpp builds with CMake; Android's platform build (Soong)
+  does not run CMake, so the source list had to be written by hand in an
+  `Android.bp`, as was done for Cactus.
+- **What happened:** five attempts, four failures, each a different rule of
+  the Android build:
+  1. `multiple rules generate .../ggml/src/ggml.o`: `ggml.c` and `ggml.cpp`
+     compile to the same object name. Fix: the C files became their own
+     static library.
+  2. `error: use of dynamic_cast requires -frtti`, although `-frtti` was in
+     the flags: Soong adds `-fno-rtti` after it. Fix: the property
+     `rtti: true`.
+  3. `use of undeclared identifier 'common_parse_utf8_codepoint'`: `src/` and
+     `common/` each have a `unicode.h` and the wrong one was found. Fix: two
+     libraries with separate include paths, as upstream has.
+  4. `undefined symbol: dl_load_library`: one source file missing from the
+     list.
+- **Proven to:** emulator. `libllama_jarvis.so` (5.8 MB) loads inside
+  `system_server`; log line `LlamaEngine: llama.cpp native library loaded`.
+- **For the talk:** about 400 source files compiled first time; all four
+  failures were about how the build system names and finds things, none
+  about the code.
+
+## 26. Three bugs that would have stopped any model calling a tool
+
+- **When:** 5 Oct 2026, about 21:00, found by reading the agent code while
+  writing the engine layer, before any model had run.
+- **What was wrong:**
+  1. **The planner never told the model which tools exist.** It passed
+     `null` for the tool list and then looked for a tool call in the reply.
+  2. **The first step skipped planning.** A new session was created with
+     status `"PLANNING"`, and the router only sends a session to the planner
+     while its status is *not* `"PLANNING"`, so every query went straight to
+     "respond".
+  3. **The engine's reply was treated as the answer.** Cactus returns a JSON
+     envelope (`{"success":..., "response":"...", "function_calls":[...]}`);
+     the code showed the whole envelope to the user as the answer, and the
+     tool path looked for a key (`tool_call`) the engine never sends.
+- **Before** (`agent/PlanNode.java`, `agent/JarvisExecutor.java`):
+
+  ```java
+  return CactusWrapper.complete(modelHandle, messages.toString(), userFacts, null);
+  ...
+  s.status     = "PLANNING";
+  ```
+- **After:** the planner asks the dispatcher for the tools worth offering and
+  passes them; a new session starts as `"NEW"`; one class
+  (`inference/Completion.java`) reads the envelope for both engines:
+
+  ```java
+  String toolsJson = mToolDispatcher != null
+          ? mToolDispatcher.toolsJsonFor(session.originalQuery) : null;
+  Completion completion = Inference.completeWithTools(
+          modelHandle, buildMessages(session).toString(), userFacts, toolsJson);
+  ...
+  s.status     = "NEW";
+  ```
+  The planner also now sends earlier tool calls and their results back to the
+  model, so it answers from the result instead of calling the tool again.
+- **How it was missed:** the router's unit tests passed. One test set the
+  status to `"NEW"` by hand to check the planning route, which is not what the
+  real code did.
+- **Proven to:** emulator, with a real model (entry 28 has the transcript).
+- **For the talk:** these were in the code for months and no test could find
+  them, because nothing had ever run a model. All three would have appeared
+  together on the first day with the phone.
+
+## 27. No way to put a model on the device
+
+- **When:** 5 Oct 2026, 21:30. The engine was loaded and wanted
+  `/data/system/jarvis/models/chat.gguf`.
+- **What happened:** `adb push` there: `Permission denied`. `adb root`:
+  `ADB Root access is disabled by system setting`. Only the system may write
+  to that folder, which is the point of it.
+- **Fix:** let the service receive the file itself:
+  `adb shell -T cmd jarvis install-model chat < model.gguf`. The service
+  writes it to its own folder and reloads. 1.8 GB took 50 seconds. (A first
+  try with `adb exec-in` copied the file but printed nothing, which looked
+  like a failure.)
+- **Proven to:** emulator.
+- **For the talk:** "copy the model to the phone" was a line in the plan with
+  nothing behind it. This also works on a phone without root.
+
+## 28. "How much battery do I have?" got a lecture instead of an answer
+
+- **When:** 5 Oct 2026, 21:36, the first set of plain-English questions to a
+  real model (Qwen3 1.7B through llama.cpp, on the emulator).
+- **Expected:** the built-in `get_battery_status` tool is called.
+- **What happened:** four of five questions worked (set an alarm, set it
+  again, list alarms, delete it). The battery question got three paragraphs
+  on how to find the battery icon on phones, laptops and smartwatches.
+- **Cause:** tools are found by meaning: each tool's description is turned
+  into a vector when it is registered, and the closest ones are offered to
+  the model. Tools are registered at start-up, before any model is loaded, so
+  the 14 built-in tools had no vectors. Only the alarm app, installed later,
+  was searchable. Nothing to do with llama.cpp: Cactus would have behaved the
+  same.
+- **Fix** (`tools/ToolScannerService.java`): when an embedding model is set,
+  index every tool already registered.
+- **After the fix:** "Your battery is at 100% and it is currently charging."
+  Still wrong afterwards: "Turn the flashlight on" was answered "the provided
+  tools do not include a function to turn the flashlight on", because
+  `set_flashlight` was not among the five closest tools the small embedding
+  model picked. Open.
+- **Proven to:** emulator (19 of 19 app checks and 22 of 22 tool checks with
+  the model loaded).
+- **For the talk:** the first real answer JarvisOS ever gave was "The capital
+  of France is Paris." at 21:35 on 5 Oct 2026, 24 seconds after being asked.
+  Screenshot: `assets/2026-10-05-jarvis-app-chat-with-model.png`.

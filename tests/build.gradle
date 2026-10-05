@@ -29,7 +29,7 @@ sourceSets {
             // they depend on Android framework classes we'd need to stub exhaustively.
             include 'com/android/server/jarvis/agent/**'
             include 'com/android/server/jarvis/model/**'
-            include 'com/android/server/jarvis/inference/CactusWrapper.java'
+            include 'com/android/server/jarvis/inference/**'
             include 'com/android/server/jarvis/core/JarvisStore.java'
             include 'com/android/server/jarvis/core/ModelRegistry.java'
             include 'com/android/server/jarvis/search/MetadataSearch.java'

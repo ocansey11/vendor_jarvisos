@@ -54,8 +54,14 @@ TOOLS="$("$ADB" shell cmd jarvis status | tr -d '\r' | sed -n 's/^tools: //p')"
 UI="$(screen)"
 expect "shows the service is ready"          "Service ready"       "$UI"
 expect "tool count matches the service"      "$TOOLS tools ·"   "$UI"
-expect "says honestly that no model is loaded" "no model loaded"   "$UI"
-expect "chat explains why it cannot answer"  "No language model is loaded" "$UI"
+# What the app says about the model must match what the service says.
+if "$ADB" shell cmd jarvis status | grep -q "model primary: ready"; then
+    expect "says a model is loaded"              "model loaded"        "$UI"
+    refuse "and shows no 'cannot answer' notice" "No language model is loaded" "$UI"
+else
+    expect "says honestly that no model is loaded" "no model loaded"   "$UI"
+    expect "chat explains why it cannot answer"  "No language model is loaded" "$UI"
+fi
 
 echo "Tools tab"
 tap "Tools"
@@ -84,11 +90,20 @@ tap "Chat"
 tap "Ask Jarvis"
 "$ADB" shell input text "hello"
 tap "Send"
-sleep 3
-UI="$(screen)"
+# With a model the reply takes a while on the emulator.
+for i in $(seq 1 30); do
+    UI="$(screen)"
+    [[ "$UI" != *'Thinking'* ]] && break
+    sleep 2
+done
 expect "the question appears in the conversation" 'text="hello"' "$UI"
-# With no model the service's own words are shown, not a made-up answer.
-expect "the service's reply is shown as is" "$("$ADB" shell "cmd jarvis query hello" | tr -d '\r')" "$UI"
+if "$ADB" shell cmd jarvis status | grep -q "model primary: ready"; then
+    refuse "a model's reply is shown, not the fallback" "I wasn't able to generate" "$UI"
+    refuse "and it is not an error"                     'text="Error'               "$UI"
+else
+    # With no model the service's own words are shown, not a made-up answer.
+    expect "the service's reply is shown as is" "I wasn't able to generate a response" "$UI"
+fi
 
 echo
 echo "$((PASS+FAIL)) checks, $FAIL failed"

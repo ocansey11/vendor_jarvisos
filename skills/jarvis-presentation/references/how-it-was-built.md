@@ -144,3 +144,45 @@ so; and the permissions in `TOOL_REGISTRY.md` (`ACCESS_RAG_SERVICE` for any
 app with user approval, `REGISTER_JARVIS_TOOL` for signed apps) are not what
 the code enforces (`ACCESS_JARVIS_SERVICE`, platform-signed only; any app may
 register tools). Both are open decisions for Kevin.
+
+## 5 Oct 2026, night: a second engine, and the first answer
+
+- **Kevin** asked what Cactus really offers ("cactus may not give us gguf...
+  maybe llama is the best option... or both"), read the findings, forked
+  llama.cpp and sent the link. He put tool-reply cards "after November, after
+  voice". While it was being built he asked how two engines affect ObjectBox
+  and whether a model can cope with many embeddings.
+- **Claude** researched Cactus (vision.md section 10), then built llama.cpp
+  into the ROM: an `Android.bp` and JNI bridge in the fork (branch
+  `jarvisos`), an engine interface in the service with Cactus and llama.cpp
+  behind it (`cmd jarvis engine`), a small vector index for llama.cpp, a
+  model-install command, 20 new unit tests, and fixes for the bugs in entries
+  26 and 28.
+- **Result on the emulator:** a real model (Qwen3 1.7B, 1.8 GB, with MiniLM
+  for search) answers inside the system service. Plain-English requests set,
+  list and delete alarms and read the battery, from the command line and from
+  the Jarvis app's Chat tab. Replies take 10 to 26 seconds on the emulator's
+  four virtual cores. Unit tests 49 of 49; app checks 19 of 19; tool checks
+  22 of 22.
+- **Not done / not proven:** nothing on a phone; Cactus itself still untested;
+  the flashlight miss (entry 28); documents are not re-indexed when the engine
+  changes; llama.cpp's vector index keeps everything in memory, fine for
+  thousands of items, not for hundreds of thousands.
+- **Claude's slips:** four failed compiles of llama.cpp (entry 25); tried to
+  run a downloaded Needle binary on the server and was stopped by the
+  session's permission rules; `adb exec-in` hid the output of the first model
+  install; in the app, "set an alarm for 8:15" set a real Android alarm
+  through the built-in tool rather than the demo app's, which is correct
+  behaviour but was not what the check expected.
+
+| Time | Event |
+|------|-------|
+| 20:55 | Kevin sends the llama.cpp fork |
+| 21:06 | First compile attempt |
+| 21:25 | Fifth attempt links: `libllama_jarvis.so` |
+| 21:29 | Emulator boots with the library loaded in system_server |
+| 21:34 | Models installed through `cmd jarvis install-model` |
+| 21:35 | First answer: "The capital of France is Paris." |
+| 21:36 | First tool call chosen by a model: `demo_set_alarm {"hour":7,"minute":30,"label":"gym"}` |
+| 21:40 | Built-in tools searchable; battery question answered |
+| 21:45 | Asked and answered from the Jarvis app |

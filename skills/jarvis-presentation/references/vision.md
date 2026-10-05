@@ -285,6 +285,9 @@ build ? and at any point we can switch from either". Claude proposed:
 - Cost: about a day of work, two emulator rebuilds; Cactus untouched.
 
 Kevin's answer: "ill come back to this, its a big decision." Nothing started.
+**Update, same night:** after the research below Kevin forked llama.cpp and
+it was built in. See roadblocks entries 25 to 28 and "5 Oct 2026, night" in
+how-it-was-built.md. A model now answers on the emulator.
 For the talk, this is the moment the dependency question stopped being
 abstract.
 
