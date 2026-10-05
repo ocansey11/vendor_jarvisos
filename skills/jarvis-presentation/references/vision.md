@@ -261,6 +261,27 @@ Triggers to actually switch: approaching the $2M revenue or funding line;
 wanting F-Droid or a business customer whose lawyers ask; Cactus breaking
 Jarvis again on upgrade; or needing inference testable off-phone.
 
+### Proposal on the table: llama.cpp as a second engine (undecided)
+
+Kevin asked, 5 Oct 2026: "should we setup an option for lamma.cpp then ? and
+build ? and at any point we can switch from either". Claude proposed:
+
+- An engine interface inside Jarvis with two implementations, Cactus (as now)
+  and llama.cpp, chosen by a setting (`auto`, `cactus`, `llama`) and
+  switchable at runtime with `cmd jarvis engine`.
+- llama.cpp built into the ROM from a fork under `ocansey11`, for both arm64
+  (phone) and x86_64 (emulator), so a real model could be tested on the
+  emulator before the phone arrives.
+- Glue code that returns Cactus's reply shape, so the rest of Jarvis does not
+  care which engine answered.
+- Catches: search indexes are tied to an embedding model, so switching engine
+  means re-indexing; the emulator needs the host CPU passed through for AVX2.
+- Cost: about a day of work, two emulator rebuilds; Cactus untouched.
+
+Kevin's answer: "ill come back to this, its a big decision." Nothing started.
+For the talk, this is the moment the dependency question stopped being
+abstract.
+
 Slide line: *the dependency you don't own is the roadmap you don't control.*
 
 ## 11. Claims to verify before putting them on a slide
