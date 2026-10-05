@@ -290,6 +290,48 @@ abstract.
 
 Slide line: *the dependency you don't own is the roadmap you don't control.*
 
+### What Cactus offers as of 5 Oct 2026 (research, nothing run)
+
+Kevin, evening of 5 Oct: "cactus may not give us gguf... maybe llama is the
+best option... or both". Claude read the v2.2.2 source in `vendor/cactus`, the
+licence, and the Cactus-Compute pages on Hugging Face and GitHub. v2.2.2
+(26 Sept 2026) is still the latest release, so the fork is current.
+
+- **Main engine, no GGUF.** `cactus_init` takes a folder with a `config.txt`
+  (a "bundle"), downloaded as a zip or made with `cactus convert <HF model>`.
+  It does not read `.gguf`. Still arm64-only, still the $2M licence.
+- **Gemma 4 E2B bundle exists** (`Cactus-Compute/gemma-4-E2B-it`, text + vision
+  + audio, tools). Zips are 2.3 to 2.7 GB (CQ2 to CQ4), not the ~0.9 GB in
+  older notes. Latest weight tag is v2.0.1, which by Cactus's rule is the one
+  for runtime v2.2.2.
+- **Embedding and FunctionGemma bundles stop at tag v1.14**
+  (`Qwen3-Embedding-0.6B`, `functiongemma-270m-it`). Whether a v1.14 bundle
+  loads in the rewritten v2 runtime is unverified. Jarvis's search and tool
+  routing depend on an embedding model, so this is a real risk for phone day.
+- **Cactus does publish one GGUF**: `gemma-4-e2b-it-hybrid-GGUF` (Q4_K_M
+  3.4 GB) "for llama.cpp". So the Gemma weights are portable; only the engine
+  is not.
+- **A second, separate engine: Needle 3 and Whistle.** Small models in a
+  single `.cact` file, run by a small engine shipped as prebuilt
+  `libneedle.a` + `needle.h` for android-arm64, linux-x86_64 and others
+  (no android-x86_64, so not the emulator). Needle 3 is tool calling (35 MB,
+  JSON with `function_calls` and a confidence score). Whistle is
+  speech-to-text (17 MB, seven languages, word timestamps, 30 s per pass).
+  Weights and repo are Apache 2.0, but the engine's C++ source is not
+  published, only binaries. Claims "inference never touches the network".
+- **What Jarvis's own glue lacks:** `jarvis_jni.cpp` exposes init, complete,
+  embed and the index. It has no transcribe call, so voice through the main
+  engine needs new JNI as well as a model.
+
+Claude's reading: "both" is the sensible answer, in this order. llama.cpp
+first, because it is the only engine that can show a model answering before
+the phone arrives, and Cactus itself publishes a GGUF for it. Needle and
+Whistle second, on the phone, as the cheap route to tool calls and voice
+(52 MB for both). The big Cactus engine third, if Gemma 4 on it proves
+clearly better than on llama.cpp. Not tested: any of the speed or accuracy
+claims; a trial of the linux-x86_64 Needle binary on the build server was
+blocked by the session's permission rules and left for Kevin to decide.
+
 ## 11. Claims to verify before putting them on a slide
 
 - App rankings in section 6: general knowledge, varies by country and year.
