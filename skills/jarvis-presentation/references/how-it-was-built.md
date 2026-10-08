@@ -186,3 +186,51 @@ register tools). Both are open decisions for Kevin.
 | 21:36 | First tool call chosen by a model: `demo_set_alarm {"hour":7,"minute":30,"label":"gym"}` |
 | 21:40 | Built-in tools searchable; battery question answered |
 | 21:45 | Asked and answered from the Jarvis app |
+
+## 8 Oct 2026: a voice, and a quarter of a second
+
+- **Kevin** asked to explore Needle and the voice models, load them, speak
+  "turn on the flashlight", check the light really is on, and see how fast the
+  whole path can go. Part way through he asked that it stay in line with the
+  project's plans, and whether 100 MB of RAM was a lot (it is not: the chat
+  model is 1.8 GB).
+- **Claude** found that Needle 3 (35 MB) and Whistle (17 MB) run from one
+  small prebuilt engine whose single call takes audio and returns tool calls.
+  Tried them on the server with the real tool list, then built them into the
+  service: a JNI library, a "fast path" that runs Needle's choice when it is
+  confident and otherwise hands over to the existing agent loop, a working
+  `processQueryWithAudio`, `cmd jarvis voice|route|fast`, a Speak button in
+  the Jarvis app, and a torch tool that waits for the camera service to
+  confirm.
+- **Result on the emulator:** a spoken "turn on the flashlight" switches the
+  torch in 230 to 250 ms inside the service, against 21 to 23 s through the
+  chat model. Typed, 196 ms measured from the server including adb. Unit tests
+  58 of 58; voice checks 29 of 29; app checks 19 of 19; tool checks 22 of 22.
+- **In line with the plans:** Needle takes the seat AGENTS.md gave to
+  FunctionGemma (the small tool-selection model, no system prompt); audio is
+  turned into a transcript and not stored (architecture rule 7); the engine
+  has one entry point, `NeedleWrapper`, as Cactus has `CactusWrapper`; its
+  tool index has its own directory; the agent loop is unchanged and is the
+  fallback.
+- **Not done / not proven:** nothing on a phone; no human voice or real
+  microphone (the emulator has no audio); the Speak button was only seen to
+  appear and ask for permission; Jarvis does not speak back; the confidence
+  bar is a judgement from one afternoon's numbers (entry 31).
+- **Claude's slips:** the flashlight explanation of 5 Oct was wrong
+  (entry 29); a first build file pointed outside its own folder; the tool
+  order problem was only found because the first real request went the slow
+  way.
+
+| Time | Event |
+|------|-------|
+| 17:02 | Kevin asks for Needle, voice and speed |
+| 17:16 | Needle 3, Whistle and the engines downloaded |
+| 17:17 | Server: 7 of 8 typed requests right; `set_flashlight` found missing from the registry |
+| 17:18 | Server: spoken clips become tool calls, about 200 ms each once loaded |
+| 17:27 | The engine links for the emulator (second attempt) |
+| 17:31 | Image built; library loads in system_server |
+| 17:33 | Needle answers inside the service, with lower confidence than on the server |
+| 17:35 | First spoken request through the fast path: 257 ms, torch confirmed off |
+| 17:41 | Tool order fixed; `voice.sh` 37 of 41, the four failures one robotic clip |
+| 17:44 | 29 of 29; older suites still pass |
+

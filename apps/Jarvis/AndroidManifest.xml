@@ -3,6 +3,8 @@
     package="com.jarvisos.app">
 
     <uses-permission android:name="android.permission.ACCESS_JARVIS_SERVICE" />
+    <!-- The microphone button on the Chat tab. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- To show the icon of each app that owns tools. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 

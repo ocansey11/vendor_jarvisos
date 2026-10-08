@@ -110,6 +110,22 @@ adb shell cmd jarvis engine          # which engine, and where it looks for mode
 adb shell "cmd jarvis query 'set an alarm for 7:30 called gym'"
 ```
 
+**Voice and the fast path.** Needle 3 and Whistle are installed the same way
+(the files are in `~/jarvis-models/needle`), then `voice.sh` checks that typed
+and spoken requests switch the torch without the chat model and that the
+camera service confirms it:
+
+```bash
+adb shell -T cmd jarvis install-model needle  < needle3.cact
+adb shell -T cmd jarvis install-model whistle < whistle.cact
+adb shell "cmd jarvis route 'turn on the flashlight'"       # what would run, and how sure
+adb shell -T cmd jarvis voice < ~/jarvis-models/voice-clips/flash-on-alan.wav
+vendor/jarvisos/tests/emulator/voice.sh [--slow]            # --slow also times the chat model
+```
+
+The emulator runs with no audio, so speech is fed in as WAV files; the clips
+are synthetic (piper and espeak-ng). 8 Oct 2026: 29 of 29.
+
 The test models are in `~/jarvis-models` on the build server. They survive an
 emulator restart; a wiped `/data` needs them installed again.
 
@@ -128,8 +144,8 @@ newer.
 | Layer | Result |
 |-------|--------|
 | 1. ObjectBox store test | **36 of 36 checks pass** (ObjectBox 4.0.2 native, Linux x86_64) |
-| 2. Unit tests | **49 of 49 pass** (DreamWorker 9, RouterNode 12, ToolNodeParsing 8, Completion 10, FlatVectorIndex 10) |
-| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **19 of 19** (`tests/emulator/jarvis-app.sh`). With llama.cpp and a model installed (5 Oct 2026): plain-English requests call tools and get answers, 10 to 26 s each |
+| 2. Unit tests | **58 of 58 pass** on 8 Oct 2026 (DreamWorker 9, RouterNode 12, ToolNodeParsing 8, Completion 10, FlatVectorIndex 10, Needle 4, Pcm 5) |
+| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **19 of 19** (`tests/emulator/jarvis-app.sh`). With llama.cpp and a model installed (5 Oct 2026): plain-English requests call tools and get answers, 10 to 26 s each. With Needle 3 and Whistle (8 Oct 2026): typed and spoken tool requests in about 0.25 s, **29 of 29** (`tests/emulator/voice.sh`) |
 | 4. Phone | no device yet |
 
 Layer 3 in detail (third and fourth boots, 15:52–15:54):

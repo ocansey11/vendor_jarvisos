@@ -105,6 +105,28 @@ both.
 - Speaking: separate problem. LineageOS ships no text-to-speech voice.
 - Comes after a text model runs on its own.
 
+**Update, 8 Oct 2026: listening works on the emulator.** Not through the
+big Cactus engine but through Cactus's small one: Whistle (17 MB) hears and
+Needle 3 (35 MB) picks the tool, in one call, in about a quarter of a second.
+`processQueryWithAudio` is real, `cmd jarvis voice < clip.wav` tests it, and
+the Jarvis app has a Speak button. When Needle is not sure, the transcript
+goes to the chat model like a typed request. Only the transcript is used; the
+audio is not kept. Still open: a human voice on a real microphone, a wake
+word, and speaking back. Roadblocks 29 to 32.
+
+Where the time goes for a spoken tool request (emulator, 4 virtual cores):
+
+| Step | Time |
+|------|------|
+| App waits for the speaker to stop | 700 ms (a setting in `VoiceRecorder`) |
+| Whistle and Needle, one engine call | 230 to 250 ms |
+| The tool itself (torch, confirmed) | 2 ms |
+| Same request through the chat model instead | 21 to 23 s |
+
+So the model is no longer the slow part: waiting to be sure the user has
+finished is. The next gain is to transcribe while they are still speaking
+(the engine has a streaming call) and stop on the words, not on a timer.
+
 ## 6. Built-in tools and the most-used apps
 
 The most-used apps worldwide are dominated by Meta and Google (WhatsApp,

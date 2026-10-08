@@ -133,6 +133,31 @@ JarvisService.mBinder.processQuery(query)
                             └─ CactusWrapper.complete(context + query) → response string
 ```
 
+### Fast path (added 8 Oct 2026)
+
+Before the agent loop, `tools/FastPath` asks Needle 3, a 35 MB tool-calling
+model, what the request needs. If Needle names tools with confidence of at
+least 0.75 (`persist.sys.jarvis.fast_confidence`, in percent), they run
+through `ToolDispatcher.dispatchByName` and their results are the reply; no
+chat model is called. Otherwise the request goes on to `JarvisExecutor`
+exactly as before. A spoken request (`processQueryWithAudio`, 16 kHz mono
+16-bit PCM) takes the same route: Whistle, a 17 MB speech model in the same
+engine, transcribes it, and only the transcript is used.
+
+```
+processQuery / processQueryWithAudio
+  └─ FastPath ── Needle (+ Whistle for audio) ── confident? ── yes ─ ToolDispatcher ─ reply
+                                                     └─ no ─ JarvisExecutor (agent loop), with the transcript
+```
+
+`inference/NeedleWrapper` is the only entry point to the engine
+(`libneedle_jarvis.so`, from `vendor/jarvisos/native/needle` and the prebuilt
+in `prebuilts/needle`); everything else uses `inference/Needle`, which keeps
+all engine calls on one thread. Needle keeps its own tool index in
+`/data/system/jarvis/index_tools_needle/`. Models:
+`/data/system/jarvis/models/needle3.cact` and `whistle.cact`.
+`cmd jarvis fast off` sends everything through the agent loop.
+
 ### Indexing pipeline (background, triggered by file changes)
 
 ```

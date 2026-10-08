@@ -1,0 +1,56 @@
+// The Needle engine, as published. See README.md; used by native/needle.
+
+cc_prebuilt_library_static {
+    name: "libneedle_prebuilt_arm64",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+            srcs: ["android-arm64/libneedle.a"],
+        },
+    },
+    sdk_version: "current",
+    stl: "none",
+}
+
+cc_prebuilt_library_static {
+    name: "libneedle_prebuilt_x86_64",
+    enabled: false,
+    arch: {
+        x86_64: {
+            enabled: true,
+            srcs: ["linux-x86_64/libneedle.a"],
+        },
+    },
+    stl: "none",
+}
+
+// The NDK flavour of libc++ (namespace std::__ndk1), which the android-arm64
+// engine was built against. Soong's own "c++_static" for SDK modules does not
+// provide those symbols in this tree, so the two archives are copied from
+// prebuilts/clang/host/linux-x86/clang-r536225/android_libc++/ndk/aarch64/lib.
+cc_prebuilt_library_static {
+    name: "libneedle_ndk_libcxx_arm64",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+            srcs: ["android-arm64/libc++_static.a"],
+        },
+    },
+    sdk_version: "current",
+    stl: "none",
+}
+
+cc_prebuilt_library_static {
+    name: "libneedle_ndk_libcxxabi_arm64",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+            srcs: ["android-arm64/libc++abi.a"],
+        },
+    },
+    sdk_version: "current",
+    stl: "none",
+}

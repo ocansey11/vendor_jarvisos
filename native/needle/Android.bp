@@ -1,0 +1,50 @@
+// libneedle_jarvis — the Needle engine (tool calling + speech-to-text) for the
+// Jarvis system service. The engine itself is a prebuilt static library
+// (vendor/jarvisos/prebuilts/needle); only needle_jni.cpp is ours.
+//
+// Two modules produce the same libneedle_jarvis.so, one per architecture,
+// because the two prebuilts need different C++ runtimes:
+//   arm64  (phone)    — android-arm64 prebuilt, NDK libc++
+//   x86_64 (emulator) — linux-x86_64 prebuilt, platform libc++, glibc shim
+
+cc_library_shared {
+    name: "libneedle_jarvis",
+    enabled: false,
+    arch: {
+        arm64: {
+            enabled: true,
+        },
+    },
+    srcs: ["needle_jni.cpp"],
+    include_dirs: ["vendor/jarvisos/prebuilts/needle"],
+    whole_static_libs: ["libneedle_prebuilt_arm64"],
+    // After the engine, so the linker takes from them what the engine needs.
+    static_libs: [
+        "libneedle_ndk_libcxx_arm64",
+        "libneedle_ndk_libcxxabi_arm64",
+    ],
+    header_libs: ["jni_headers"],
+    cflags: ["-Wall", "-Werror"],
+    sdk_version: "current",
+    stl: "c++_static",
+}
+
+cc_library_shared {
+    name: "libneedle_jarvis_emu",
+    stem: "libneedle_jarvis",
+    enabled: false,
+    arch: {
+        x86_64: {
+            enabled: true,
+        },
+    },
+    srcs: [
+        "needle_jni.cpp",
+        "glibc_shim.cpp",
+    ],
+    include_dirs: ["vendor/jarvisos/prebuilts/needle"],
+    whole_static_libs: ["libneedle_prebuilt_x86_64"],
+    header_libs: ["jni_headers"],
+    cflags: ["-Wall", "-Werror"],
+    stl: "libc++",
+}

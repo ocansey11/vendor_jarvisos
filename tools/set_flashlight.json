@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/set_flashlight",
+  "tool_name": "set_flashlight",
+  "description": "Turn the flashlight (torch) on or off. Use when user says turn on the flashlight, torch on, switch off the flashlight, turn the light off, or I need a light.",
+  "params": [
+    {"name": "enabled", "type": "boolean", "required": true, "description": "true to turn the flashlight on, false to turn it off"}
+  ]
+}

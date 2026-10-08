@@ -37,6 +37,11 @@ notes; entries 7 onward were written as they happened.
 26. Three bugs that would have stopped any model calling a tool
 27. No way to put a model on the device
 28. "How much battery do I have?" got a lecture instead of an answer
+29. The flashlight was never a tool
+30. An engine with no build for the emulator
+31. Confidence that moved when the list was reordered
+32. The robot voice Jarvis could not understand
+33. The phone build was harder than the emulator hack
 
 ---
 
@@ -777,8 +782,189 @@ notes; entries 7 onward were written as they happened.
   tools do not include a function to turn the flashlight on", because
   `set_flashlight` was not among the five closest tools the small embedding
   model picked. Open.
+  **Corrected on 8 Oct 2026: that explanation was wrong, see entry 29.**
 - **Proven to:** emulator (19 of 19 app checks and 22 of 22 tool checks with
   the model loaded).
 - **For the talk:** the first real answer JarvisOS ever gave was "The capital
   of France is Paris." at 21:35 on 5 Oct 2026, 24 seconds after being asked.
   Screenshot: `assets/2026-10-05-jarvis-app-chat-with-model.png`.
+
+## 29. The flashlight was never a tool
+
+- **When:** 8 Oct 2026, 17:15, while collecting the real tool list to try
+  Needle with.
+- **Expected:** `set_flashlight` is one of the built-in tools; entry 28 said
+  the search simply ranked it sixth or lower.
+- **What happened:** `cmd jarvis tool set_flashlight '{"enabled":true}'`
+  answered `Error: tool 'set_flashlight' not registered`. The code that
+  switches the torch existed in `SystemToolExecutor`, but a built-in tool is
+  only registered if it has a JSON file in `vendor/jarvisos/tools/`, and there
+  were 14 files for 16 tools. `set_flashlight` and `set_brightness` had none.
+- **Cause:** Claude's explanation in entry 28 was a guess that was never
+  checked. No model, small or large, could have picked a tool that was not in
+  the registry. On 5 Oct the chat model's reply ("the provided tools do not
+  include a function to turn the flashlight on") was simply true.
+- **Fix:** two new files. Before: nothing. After
+  (`tools/set_flashlight.json`):
+
+  ```json
+  {
+    "package_name": "com.jarvisos.system",
+    "app_label": "JarvisOS System",
+    "receiver_class": "@system/set_flashlight",
+    "tool_name": "set_flashlight",
+    "description": "Turn the flashlight (torch) on or off. Use when user says turn on the flashlight, torch on, switch off the flashlight, turn the light off, or I need a light.",
+    "params": [
+      {"name": "enabled", "type": "boolean", "required": true, "description": "true to turn the flashlight on, false to turn it off"}
+    ]
+  }
+  ```
+
+  The tool also said "Flashlight on" without knowing. Before
+  (`tools/SystemToolExecutor.java`):
+
+  ```java
+  cm.setTorchMode(torchCameraId, enable);
+  return "Flashlight " + (enable ? "on" : "off");
+  ```
+
+  After, it waits for the camera service to report the change:
+
+  ```java
+  cm.registerTorchCallback(callback, BackgroundThread.getHandler());
+  try {
+      cm.setTorchMode(cameraId, enable);
+      if (!changed.await(TORCH_CONFIRM_MS, TimeUnit.MILLISECONDS)) {
+          return "Error: the flashlight did not turn " + (enable ? "on" : "off");
+      }
+  } finally {
+      cm.unregisterTorchCallback(callback);
+  }
+  return "Flashlight " + (enable ? "on" : "off");
+  ```
+
+- **Proven to:** emulator. `dumpsys media.camera` logs "Torch for camera id 0
+  turned on for client PID" (system_server) after each request; the emulator's
+  camera has a flash unit but no light to look at.
+- **For the talk:** a failure blamed on the model for three days was a
+  missing 9-line file. Check the registry before blaming the model.
+
+## 30. An engine with no build for the emulator
+
+- **When:** 8 Oct 2026, 17:20 to 17:27.
+- **Expected:** Needle 3 and Whistle run from a prebuilt engine
+  (`libneedle.a`). It is published for 15 platforms; android-x86_64, the
+  emulator, is not one of them, so the plan on 5 Oct was "phone only".
+- **What happened:** the linux-x86_64 library was linked into an Android
+  library anyway. `llvm-nm -u` showed it needs only libc, libm and libc++, no
+  sockets. The first link failed on exactly two symbols:
+
+  ```
+  ld.lld: error: undefined symbol: bcmp
+  ld.lld: error: undefined symbol: _ZNSt3__113__hash_memoryEPKvm
+  ```
+
+- **Cause:** the library was built against glibc and a newer libc++ than
+  Android 15 ships. Android's C library dropped `bcmp`, and
+  `std::__hash_memory` only exists in libc++ from LLVM 21.
+- **Fix** (`native/needle/glibc_shim.cpp`, built for x86_64 only): supply
+  them, plus the three glibc character tables and `__isoc99_fscanf`.
+
+  ```cpp
+  int bcmp(const void* a, const void* b, size_t n) { return memcmp(a, b, n); }
+
+  size_t needle_shim_hash_memory(const void* data, size_t n)
+          __asm__("_ZNSt3__113__hash_memoryEPKvm");
+  ```
+
+- **Proven to:** emulator. The engine gives the same answer and the same
+  confidence to four decimal places inside `system_server` as the published
+  runner does on the server (0.7269 for the same tool list). The arm64 build
+  for the phone uses the proper android-arm64 library and needs no shim.
+- **For the talk:** "not supported on the emulator" turned out to mean six
+  missing symbols.
+
+## 31. Confidence that moved when the list was reordered
+
+- **When:** 8 Oct 2026, 17:33, the first request through Needle inside the
+  service.
+- **Expected:** "turn on the flashlight" scores about 0.97, as it had on the
+  server ten minutes earlier, and runs at once.
+- **What happened:** it scored 0.7269, under the bar of 0.75, so the request
+  went to the chat model and took 22 seconds instead of a quarter of one.
+- **Cause:** the same 16 tools in a different order. The server test listed
+  them alphabetically; the service listed them in the order they were
+  registered. Over eight random orders the right tool was always chosen, but
+  confidence for a correct call ranged from 0.55 to 0.98, and wrong calls for
+  "what is the capital of France" reached 0.67.
+- **Fix** (`tools/ToolDispatcher.java`): a fixed order, so the score cannot
+  change because an app was installed earlier or later.
+
+  ```java
+  all.sort((x, y) -> String.valueOf(x.toolName).compareTo(String.valueOf(y.toolName)));
+  ```
+
+- **Proven to:** emulator (29 of 29 in `tests/emulator/voice.sh`). Not solved:
+  the gap between the highest wrong score seen (0.67) and the bar (0.75) is
+  small, and some correct requests ("set an alarm for 7:30", 0.55 to 0.80)
+  fall under the bar and take the slow path. Cactus's own answer is
+  fine-tuning Needle on the product's tools; not tried.
+- **For the talk:** a confidence score is a measurement of the model and the
+  prompt together. Change the prompt and it is a different instrument.
+
+## 32. The robot voice Jarvis could not understand
+
+- **When:** 8 Oct 2026, 17:41, first full run of `voice.sh`.
+- **Expected:** all six spoken clips switch the torch.
+- **What happened:** five did. The sixth, "Turn off the flashlight." spoken
+  by the robotic `espeak-ng` synthesiser, was heard as "to an offensive last
+  night". Needle was not confident about it, so the transcript went to the
+  chat model, which asked what the user meant. Nothing was switched.
+- **Cause:** a small speech model and an unnatural voice. The two natural
+  synthetic voices (piper) were heard correctly every time.
+- **Fix:** none to the product; the safe thing happened. The test now reports
+  robotic clips instead of judging them.
+- **Proven to:** emulator, with synthetic voices only. No human voice and no
+  real microphone has been tried: the emulator runs without audio.
+- **For the talk:** the useful result is the failure mode. A misheard request
+  did nothing, slowly, rather than the wrong thing, quickly.
+
+## 33. The phone build was harder than the emulator hack
+
+- **When:** 8 Oct 2026, 17:45 to 17:57, compiling the Needle library for the
+  phone (arm64) for the first time.
+- **Expected:** the emulator needed a shim because it borrows a Linux
+  library; the phone has a proper android-arm64 library, so it just links.
+- **What happened:** four attempts. (1) The device is `Pong`, not `pong`.
+  (2) The phone build refuses a package list that names a module which does
+  not exist for it (`libneedle_jarvis_emu`); the emulator build had accepted
+  the reverse. (3) `jni.h` not found. (4) Dozens of
+  `undefined symbol: std::__ndk1::...`.
+- **Cause of (4):** the engine was built with the NDK, whose C++ library
+  lives in the namespace `std::__ndk1`; the platform's lives in `std::__1`.
+  Asking Soong for the NDK one (`stl: "c++_static"`) did not supply those
+  symbols in this tree.
+- **Fix:** list one module per target (`jarvisos.mk`):
+
+  ```make
+  ifneq ($(filter %_x86_64,$(TARGET_PRODUCT)),)
+  PRODUCT_PACKAGES += libneedle_jarvis_emu
+  else
+  PRODUCT_PACKAGES += libneedle_jarvis
+  endif
+  ```
+
+  and link the toolchain's own NDK C++ library, copied beside the engine
+  (`prebuilts/needle/android-arm64/libc++_static.a`, `libc++abi.a`, 28 MB):
+
+  ```
+  static_libs: [
+      "libneedle_ndk_libcxx_arm64",
+      "libneedle_ndk_libcxxabi_arm64",
+  ],
+  ```
+
+- **Proven to:** compiles (`libneedle_jarvis.so` for Pong, 2.0 MB). It has
+  never been loaded: no arm64 device. The full Pong ROM has not been rebuilt.
+- **For the talk:** the "hack" for the emulator took two tries; the
+  "supported" platform took four.

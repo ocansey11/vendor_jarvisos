@@ -16,8 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The Chat tab: sends what the user types to JarvisManager.query and shows
- * the reply as it comes back, unedited. The conversation is kept in memory
+ * The Chat tab: sends what the user types to JarvisManager.query, or what
+ * they say to JarvisManager.queryWithAudio, and shows the reply as it comes
+ * back, unedited. The conversation is kept in memory
  * only; the service keeps its own record.
  */
 class ChatScreen {
@@ -38,6 +39,8 @@ class ChatScreen {
     private final List<Message> mMessages = new ArrayList<>();
     private final EditText mInput;
     private final Button mSend;
+    private final Button mSpeak;
+    private final VoiceRecorder mRecorder = new VoiceRecorder();
     private final View mNotice;
     private final View mEmpty;
 
@@ -52,7 +55,10 @@ class ChatScreen {
         list.addHeaderView(header, null, false);
         list.setAdapter(mAdapter);
 
+        mSpeak  = activity.findViewById(R.id.chat_speak);
+
         mSend.setOnClickListener(v -> send());
+        mSpeak.setOnClickListener(v -> speak());
         mInput.setOnEditorActionListener((v, actionId, event) -> {
             boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
                     && event.getAction() == KeyEvent.ACTION_DOWN && !event.isShiftPressed();
@@ -71,22 +77,58 @@ class ChatScreen {
         final String query = mInput.getText().toString().trim();
         if (query.isEmpty() || !mSend.isEnabled()) return;
         mInput.setText("");
-        mSend.setEnabled(false);
+        final Message reply = ask(query);
+        mActivity.call(jarvis -> jarvis.query(query), (result, error) -> show(reply, result, error));
+    }
 
+    /** First tap starts listening; it stops by itself after the speaker does, or on a second tap. */
+    private void speak() {
+        if (mRecorder.isRecording()) {
+            mRecorder.stop();
+            return;
+        }
+        if (!mSend.isEnabled()) return;
+        if (mActivity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            mActivity.requestPermissions(
+                    new String[] {android.Manifest.permission.RECORD_AUDIO}, 0);
+            return;
+        }
+        final Message reply = ask(mActivity.getString(R.string.chat_spoken));
+        reply.text = mActivity.getString(R.string.chat_listening);
+        mSpeak.setText(R.string.chat_stop);
+        mAdapter.notifyDataSetChanged();
+        mRecorder.start(pcm -> {
+            mSpeak.setText(R.string.chat_speak);
+            if (pcm == null) {
+                show(reply, null, mActivity.getString(R.string.chat_no_microphone));
+                return;
+            }
+            reply.text = mActivity.getString(R.string.chat_thinking);
+            mAdapter.notifyDataSetChanged();
+            mActivity.call(jarvis -> jarvis.queryWithAudio("", pcm),
+                    (result, error) -> show(reply, result, error));
+        });
+    }
+
+    /** Adds the user's request and a pending reply to the conversation. */
+    private Message ask(String request) {
+        mSend.setEnabled(false);
         final Message reply = new Message(false, mActivity.getString(R.string.chat_thinking));
         reply.pending = true;
-        mMessages.add(new Message(true, query));
+        mMessages.add(new Message(true, request));
         mMessages.add(reply);
         mEmpty.setVisibility(View.GONE);
         mAdapter.notifyDataSetChanged();
+        return reply;
+    }
 
-        mActivity.call(jarvis -> jarvis.query(query), (result, error) -> {
-            reply.pending = false;
-            reply.failed = error != null;
-            reply.text = error != null ? error : result;
-            mSend.setEnabled(true);
-            mAdapter.notifyDataSetChanged();
-        });
+    private void show(Message reply, String result, String error) {
+        reply.pending = false;
+        reply.failed = error != null;
+        reply.text = error != null ? error : result;
+        mSend.setEnabled(true);
+        mAdapter.notifyDataSetChanged();
     }
 
     private final BaseAdapter mAdapter = new BaseAdapter() {

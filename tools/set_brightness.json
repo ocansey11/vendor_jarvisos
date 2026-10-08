@@ -1,0 +1,10 @@
+{
+  "package_name": "com.jarvisos.system",
+  "app_label": "JarvisOS System",
+  "receiver_class": "@system/set_brightness",
+  "tool_name": "set_brightness",
+  "description": "Set the screen brightness. Use when user says set brightness, make the screen brighter, dim the screen, or brightness to 50 percent.",
+  "params": [
+    {"name": "level", "type": "integer", "required": true, "description": "Brightness as a percentage from 0 to 100"}
+  ]
+}

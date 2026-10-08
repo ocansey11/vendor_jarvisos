@@ -15,6 +15,11 @@
     <string name="chat_no_model">No language model is loaded, so Jarvis cannot answer questions yet. Tools still work: try the Tools tab.</string>
     <string name="chat_hint">Ask Jarvis</string>
     <string name="chat_send">Send</string>
+    <string name="chat_speak">Speak</string>
+    <string name="chat_stop">Stop</string>
+    <string name="chat_listening">Listening…</string>
+    <string name="chat_spoken">Spoken request</string>
+    <string name="chat_no_microphone">The microphone is not available.</string>
     <string name="chat_thinking">Thinking…</string>
     <string name="chat_empty">Nothing asked yet.</string>
 

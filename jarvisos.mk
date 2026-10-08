@@ -22,6 +22,9 @@ PRODUCT_COPY_FILES += $(foreach f,$(JARVISOS_TOOL_FILES),\
 #   libcactus        → vendor/cactus (CactusWrapper.java)
 #   libllama_jarvis  → vendor/llama.cpp (LlamaEngine.java), with the small
 #                      libllama_jarvis_cpucheck that decides whether to load it
+#   libneedle_jarvis → vendor/jarvisos/native/needle (NeedleWrapper.java); the
+#                      module is libneedle_jarvis on arm64 and
+#                      libneedle_jarvis_emu on x86_64, same file either way
 #   libobjectbox-jni → vendor/jarvisos/prebuilts/objectbox (JarvisStore.java)
 # Nothing else depends on these modules, so they must be listed here to land
 # in /system/lib64.
@@ -32,6 +35,15 @@ PRODUCT_PACKAGES += \
     libllama_jarvis \
     libllama_jarvis_cpucheck \
     libobjectbox-jni
+
+# The Needle engine has one prebuilt per architecture and so one module per
+# architecture. A phone build fails on a package that does not exist for it,
+# so only the right one is listed.
+ifneq ($(filter %_x86_64,$(TARGET_PRODUCT)),)
+PRODUCT_PACKAGES += libneedle_jarvis_emu
+else
+PRODUCT_PACKAGES += libneedle_jarvis
+endif
 
 # ---------------------------------------------------------------------------
 # The Jarvis app (apps/Jarvis): chat and the tool list, on screen.
@@ -48,6 +60,7 @@ PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST += \
     system/lib64/libcactus.so \
     system/lib64/libllama_jarvis.so \
     system/lib64/libllama_jarvis_cpucheck.so \
+    system/lib64/libneedle_jarvis.so \
     system/lib64/libobjectbox-jni.so
 
 # ---------------------------------------------------------------------------
