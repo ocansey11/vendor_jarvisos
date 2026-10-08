@@ -1,0 +1,330 @@
+<title>Jarvis Morphing Surface</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600&display=swap">
+<style>
+/* Layout: one reading column; the five phone mock-ups break out as a wrapping row. */
+:root {
+  --bg: #f2f4f6;
+  --panel: #ffffff;
+  --ink: #14202b;
+  --muted: #566573;
+  --line: #d5dbe1;
+  --accent: #1f4fd8;
+  --accent-soft: #e2e9fc;
+  --ok: #1d7a4f;
+  --warn: #a35a00;
+  --screen: #0e151c;
+  --screen-ink: #eef2f6;
+  --screen-muted: #93a1ae;
+  --screen-panel: #1c2731;
+  --screen-accent: #7fa0ff;
+  --display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151b; --panel: #172029; --ink: #e8edf2; --muted: #9aa8b5; --line: #2a3642;
+    --accent: #8eaaff; --accent-soft: #1d2a4a; --ok: #5fcf97; --warn: #f0b05a;
+    --screen: #05090d; --screen-ink: #eef2f6; --screen-muted: #93a1ae; --screen-panel: #18222c; --screen-accent: #8eaaff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151b; --panel: #172029; --ink: #e8edf2; --muted: #9aa8b5; --line: #2a3642;
+  --accent: #8eaaff; --accent-soft: #1d2a4a; --ok: #5fcf97; --warn: #f0b05a;
+  --screen: #05090d; --screen-ink: #eef2f6; --screen-muted: #93a1ae; --screen-panel: #18222c; --screen-accent: #8eaaff;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.page { max-width: 760px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: flex; flex-direction: column; gap: 44px; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 23px; line-height: 1.25; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--body); font-weight: 600; font-size: 16px; margin: 0; }
+p { margin: 0; }
+.lede { font-size: 18px; color: var(--ink); max-width: 62ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+section > p, section > ul, section > ol { max-width: 66ch; }
+ul, ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: 0.88em; }
+.status { border-left: 3px solid var(--warn); padding: 4px 0 4px 14px; color: var(--muted); font-size: 15px; max-width: 66ch; }
+.status strong { color: var(--ink); }
+
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-weight: 500; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+tr.pick td { background: var(--accent-soft); }
+tr.pick td:first-child { padding-left: 10px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+pre { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+pre.mermaid { background: var(--panel); text-align: center; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.pair > div { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cap { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+/* Phone mock-ups. The screens keep one dark look in both themes: they show the phone, not the page. */
+.shapes { display: flex; flex-wrap: wrap; gap: 22px 18px; justify-content: flex-start; }
+.shape { width: 168px; display: flex; flex-direction: column; gap: 10px; }
+.phone { height: 300px; border-radius: 22px; background: var(--screen); border: 3px solid var(--line); padding: 12px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; color: var(--screen-ink); font-size: 12px; line-height: 1.35; position: relative; overflow: hidden; }
+.phone::before { content: ""; position: absolute; top: 9px; left: 50%; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: var(--screen-panel); }
+.dim { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent 0 34px, var(--screen-panel) 34px 35px); opacity: 0.5; }
+.surf { position: relative; background: var(--screen-panel); border-radius: 14px; padding: 10px 11px; display: flex; flex-direction: column; gap: 7px; }
+.surf.pill { border-radius: 999px; flex-direction: row; align-items: center; gap: 8px; padding: 8px 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--screen-accent); flex: none; }
+.surf small { color: var(--screen-muted); font-family: var(--mono); font-size: 10px; }
+.chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--screen-accent); color: var(--screen-accent); border-radius: 999px; padding: 4px 9px; font-size: 11px; }
+.chip.plain { border-color: var(--screen-muted); color: var(--screen-muted); }
+.item { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.item b { font-family: var(--mono); font-weight: 500; font-size: 14px; }
+.item span { color: var(--screen-muted); font-size: 11px; }
+.tog { width: 26px; height: 14px; border-radius: 999px; background: var(--screen-muted); position: relative; flex: none; }
+.tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--screen); }
+.tog.on { background: var(--screen-accent); }
+.tog.on::after { left: 14px; }
+.btnrow { display: flex; gap: 6px; }
+.btn { flex: 1; text-align: center; border-radius: 8px; padding: 6px 4px; font-size: 11px; background: var(--screen-accent); color: var(--screen); font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--screen-ink); border: 1px solid var(--screen-muted); font-weight: 400; }
+.quote { border-left: 2px solid var(--screen-muted); padding-left: 8px; color: var(--screen-ink); }
+.shape h3 { font-family: var(--display); font-size: 15px; }
+.shape p { font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+
+.steps { counter-reset: wp; display: flex; flex-direction: column; }
+.wp { display: grid; grid-template-columns: 34px 1fr; gap: 4px 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.wp::before { counter-increment: wp; content: counter(wp); font-family: var(--mono); font-size: 14px; color: var(--accent); padding-top: 2px; }
+.wp > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wp .pass { font-size: 14.5px; color: var(--muted); }
+.wp .pass b { color: var(--ok); font-weight: 600; }
+footer { font-size: 14px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+
+<div class="page">
+
+<header>
+  <div class="eyebrow">JarvisOS · plan for discussion · 8 October 2026</div>
+  <h1>A surface that changes shape</h1>
+  <p class="lede">Today Jarvis gives each reply as one line of text. This plan gives the reply a shape that fits its content. The app makes the view. Jarvis shows the view. The model only selects the tool.</p>
+  <p class="status"><strong>Status: nothing in this plan is built.</strong> The pictures are drawings, not screenshots. The speed figures come from the emulator on 8 October 2026, with speech from files and not from a microphone. The text obeys the rules of ASD-STE100 (Simplified Technical English). It was not checked with an STE checker.</p>
+</header>
+
+<section>
+  <h2>The decision for the team</h2>
+  <p>The team must make one decision: who makes the view. Section 3 gives four options and one recommendation. The other sections give the terms, the contract, the safety rules and the work.</p>
+</section>
+
+<section>
+  <h2>1. Terms</h2>
+  <p>Each term has one meaning in this plan.</p>
+  <div class="scroll"><table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Tool</td><td>An action that an app gives to Jarvis. Example: <code>set_alarm</code>.</td></tr>
+    <tr><td>Reply</td><td>The result that a tool sends to Jarvis.</td></tr>
+    <tr><td>Surface</td><td>The area of the screen where Jarvis shows a reply.</td></tr>
+    <tr><td>Shape</td><td>The size and layout of the surface. There are five shapes.</td></tr>
+    <tr><td>View</td><td>A description of the content of a card. A view is data. A view is not code.</td></tr>
+    <tr><td>Part</td><td>One element of a view. Examples: list, button, toggle.</td></tr>
+    <tr><td>Catalog</td><td>The fixed list of parts that Jarvis can draw.</td></tr>
+    <tr><td>Bar</td><td>The lowest confidence at which Jarvis runs a tool without a question. Today the bar is 0.75.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>2. The five shapes</h2>
+  <p>The Jarvis app selects the shape with fixed rules. A model does not select the shape. Thus the same reply always gives the same shape.</p>
+  <div class="shapes">
+    <div class="shape">
+      <div class="phone"><div class="dim"></div>
+        <div class="surf pill"><span class="dot"></span><span>turn on the flash…</span></div>
+      </div>
+      <h3>Pill</h3>
+      <p>Jarvis listens. The pill shows the words that Jarvis hears.</p>
+    </div>
+    <div class="shape">
+      <div class="phone"><div class="dim"></div>
+        <div class="surf"><span>Flashlight on</span><small>set_flashlight · 0.97</small></div>
+      </div>
+      <h3>Line</h3>
+      <p>A tool ran. The reply has text only. The line goes away after two seconds.</p>
+    </div>
+    <div class="shape">
+      <div class="phone"><div class="dim"></div>
+        <div class="surf"><span>"set an alarm for 7:30"</span>
+          <div class="chiprow"><span class="chip">Set alarm 07:30</span><span class="chip plain">Ask Jarvis</span></div>
+          <small>confidence 0.61, below the bar</small></div>
+      </div>
+      <h3>Chips</h3>
+      <p>Needle named a tool, but its confidence is below the bar. One touch runs the tool.</p>
+    </div>
+    <div class="shape">
+      <div class="phone"><div class="dim"></div>
+        <div class="surf"><small>ALARMS · from the Clock app</small>
+          <div class="item"><div><b>07:30</b><br><span>Gym</span></div><span class="tog on"></span></div>
+          <div class="item"><div><b>08:15</b><br><span>No label</span></div><span class="tog"></span></div>
+          <div class="btnrow"><span class="btn ghost">New alarm</span></div></div>
+      </div>
+      <h3>Card</h3>
+      <p>The reply has data and the tool has a view. Each toggle and button is a tool call.</p>
+    </div>
+    <div class="shape">
+      <div class="phone"><div class="dim"></div>
+        <div class="surf"><span>Send this message to Sam?</span>
+          <div class="quote">I am running late</div>
+          <div class="btnrow"><span class="btn ghost">Cancel</span><span class="btn">Send</span></div></div>
+      </div>
+      <h3>Sheet</h3>
+      <p>The tool needs a confirmation, or an argument is missing.</p>
+    </div>
+  </div>
+  <p>An answer from the chat model uses the Card shape with text only.</p>
+  <div class="scroll"><table>
+    <tr><th>Condition</th><th>Shape</th></tr>
+    <tr><td>The microphone is open</td><td>Pill</td></tr>
+    <tr><td>Confidence is at or above the bar, and the reply has text only</td><td>Line</td></tr>
+    <tr><td>A tool is named, and confidence is below the bar</td><td>Chips</td></tr>
+    <tr><td>The reply has data, and the tool has a view</td><td>Card</td></tr>
+    <tr><td>The tool needs a confirmation or an argument</td><td>Sheet</td></tr>
+  </table></div>
+  <p>The Chips shape is new. Today a request below the bar goes to the chat model. With chips, one touch runs the tool. This is a hypothesis. Work package 3 tests it.</p>
+  <div class="scroll"><table>
+    <tr><th>Path for "turn on the flashlight"</th><th>Time on the emulator</th></tr>
+    <tr><td>Whistle and Needle select the tool (the fast path)</td><td class="num">230 to 250 ms</td></tr>
+    <tr><td>The chat model selects the tool</td><td class="num">21 to 23 s</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>3. Who makes the view</h2>
+  <div class="scroll"><table>
+    <tr><th>Option</th><th>Who makes the view</th><th>When</th><th>Model work</th><th>Speed</th><th>Brand of the app</th></tr>
+    <tr><td>A. Built-in views</td><td>Jarvis</td><td>Build time of the ROM</td><td>None</td><td>Fast</td><td>None</td></tr>
+    <tr class="pick"><td>B. App-declared views</td><td>The app, from the catalog</td><td>Build time of the app</td><td>None</td><td>Fast</td><td>Icon and one colour</td></tr>
+    <tr><td>C. App-hosted surface</td><td>The app draws its own pixels</td><td>Run time</td><td>None</td><td>One more process</td><td>Full</td></tr>
+    <tr><td>D. Model-composed views</td><td>The model, from the catalog</td><td>Run time</td><td>Large</td><td>Slow on a phone</td><td>None</td></tr>
+  </table></div>
+  <h3>Recommendation: make option B the primary path</h3>
+  <ul>
+    <li>The app knows its data. Thus the app is the correct owner of the view.</li>
+    <li>The view is a file in the app package. Jarvis reads it when the app is installed, as it reads the tool definition. No model reads or writes it.</li>
+    <li>The fast path stays fast. Option B adds only the time to draw.</li>
+    <li>Option A is option B for the built-in tools. Use the same catalog for both.</li>
+    <li>Keep option C for apps that must show their own design. Do a test first (work package 5).</li>
+    <li>Keep option D for a view that mixes data from two apps. Do not start it before a larger model runs on the phone.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. The contract</h2>
+  <p>A tool sends text and, optionally, data. The app declares the view with the tool. The view binds parts to the data with paths. Tools that send only a string continue to operate.</p>
+  <div class="pair">
+    <div><span class="cap">The reply, from the tool at run time</span>
+<pre>{
+  "text": "You have 2 alarms.",
+  "data": {
+    "alarms": [
+      {"id": 3, "time": "07:30",
+       "label": "Gym", "enabled": true},
+      {"id": 4, "time": "08:15",
+       "label": "", "enabled": false}
+    ]
+  }
+}</pre></div>
+    <div><span class="cap">The view, from the app at install time</span>
+<pre>{
+  "view": "list",
+  "title": "Alarms",
+  "items": "$.alarms",
+  "item": {
+    "primary": "$.time",
+    "secondary": "$.label",
+    "toggle": {
+      "value": "$.enabled",
+      "tool": "demo_set_alarm_enabled",
+      "args": {"id": "$.id",
+               "enabled": "$toggle"}
+    }
+  },
+  "actions": [
+    {"label": "New alarm",
+     "tool": "demo_set_alarm",
+     "ask": ["hour", "minute"]}
+  ]
+}</pre></div>
+  </div>
+  <pre class="mermaid">
+flowchart LR
+  U([User]) -->|speech or text| J[Jarvis service]
+  J -->|Needle selects the tool| T[Tool in the app]
+  T -->|reply: text and data| J
+  R[(Tool registry: definition and view)] -->|view| S
+  J -->|reply| S[Surface in the Jarvis app]
+  S -->|touch = tool call| J
+  </pre>
+  <p>Each button, toggle or chip is a tool call. Jarvis sends it through <code>ToolDispatcher</code>. Thus each action obeys the same permission and the same confirmation rule as a spoken request.</p>
+  <p>Catalog, version 1, has twelve parts: text, heading, row, column, list, item, icon, button, toggle, slider, chip, field.</p>
+</section>
+
+<section>
+  <h2>5. Safety rules</h2>
+  <ol>
+    <li>A view is data. Jarvis does not run code from a view.</li>
+    <li>Jarvis checks each view against the catalog when the app is installed. Jarvis refuses a view that is not correct.</li>
+    <li>Text from an app is plain text. Jarvis does not read it as layout or as an instruction.</li>
+    <li>An action in a view can call only the tools of the same app. An action that calls a tool of a different app needs a confirmation from the user.</li>
+    <li>A view cannot load content from the network.</li>
+    <li>An app can set its icon and one colour. Jarvis sets all other style.</li>
+    <li>Jarvis limits the size of a reply and the number of items in a list.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>6. What others do</h2>
+  <p>No system in this table was tested for this plan. Do a check of each statement before it goes on a slide.</p>
+  <div class="scroll"><table>
+    <tr><th>System</th><th>What it is</th><th>Use for Jarvis</th></tr>
+    <tr><td><a href="https://developers.googleblog.com/en/a2ui-v0-9-generative-ui/">A2UI 0.9</a></td><td>Google, April 2026. A model sends a description of a view. The client draws it from its own catalog.</td><td>The catalog idea and the JSON form. Its list of renderers has no Android Compose renderer.</td></tr>
+    <tr><td><a href="https://modelcontextprotocol.io/seps/1865-mcp-apps-interactive-user-interfaces-for-mcp">MCP Apps</a></td><td>Anthropic and OpenAI, specification 2026-01-26. A tool declares a UI resource before the call. The host shows it in a sandbox.</td><td>The same idea as option B: the view is declared with the tool. It uses HTML, which is too heavy for a system surface.</td></tr>
+    <tr><td><a href="https://developer.android.com/ai/appfunctions">AppFunctions</a></td><td>Google, Android 16. Apps give functions to an agent on the device.</td><td>Tools only. It has no view. Jarvis has the same idea in its tool registry.</td></tr>
+    <tr><td><a href="https://developer.apple.com/documentation/appintents/snippetintent">App Intents snippets</a></td><td>Apple, iOS 26. The app gives a view for the result. The system shows it. The view can have buttons.</td><td>The best example of "the app does the work". It is option C.</td></tr>
+    <tr><td><a href="https://developer.android.com/jetpack/androidx/releases/glance-wear">RemoteViews, Glance, Remote Compose</a></td><td>Google. Methods for one process to draw a view that a different process made.</td><td>Candidates for option C.</td></tr>
+    <tr><td>AG-UI</td><td>CopilotKit. A stream of events between an agent and a screen.</td><td>Useful later, when a reply arrives in steps.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>7. Work packages</h2>
+  <p>The sequence obeys the project priority: model, then voice, then cards. No work package starts before the first test on a phone.</p>
+  <div class="steps">
+    <div class="wp"><div><h3>Reply with text and data</h3><p>Change <code>ToolDispatcher</code> and add one AIDL method.</p><p class="pass"><b>Pass:</b> the alarm demo sends both. The 22 tool checks continue to pass.</p></div></div>
+    <div class="wp"><div><h3>The five shapes, with built-in views</h3><p>Option A, in the Jarvis app.</p><p class="pass"><b>Pass:</b> a test shows each shape. Jarvis draws a card in less than 100 ms after the reply.</p></div></div>
+    <div class="wp"><div><h3>Chips for requests below the bar</h3><p>Show the tool that Needle named as a chip.</p><p class="pass"><b>Pass:</b> on 100 labelled requests, the correct tool is the first chip in a minimum of 90.</p></div></div>
+    <div class="wp"><div><h3>App-declared views</h3><p>Option B: the catalog, the check at install, and a view for the alarm demo.</p><p class="pass"><b>Pass:</b> Jarvis refuses a bad view. Jarvis refuses an action that calls a different app.</p></div></div>
+    <div class="wp"><div><h3>App-hosted surface</h3><p>Option C: a test of RemoteViews and Remote Compose.</p><p class="pass"><b>Pass:</b> a report with the draw time and the memory for each, and a decision.</p></div></div>
+    <div class="wp"><div><h3>Model-composed views</h3><p>Option D.</p><p class="pass"><b>Pass:</b> research only.</p></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>8. Questions for the team</h2>
+  <ol>
+    <li>Is twelve parts the correct size for the catalog? Which part is missing?</li>
+    <li>Does Jarvis use the A2UI JSON form, or a smaller form of its own?</li>
+    <li>Where is the surface: in the Jarvis app, or above all apps as a system layer?</li>
+    <li>Can an app change its view at run time, or only at install time?</li>
+    <li>How much of its brand can an app show?</li>
+    <li>What must the surface do for a user who cannot see the screen?</li>
+    <li>Apps can also give typed data to each other through Jarvis: a contact, a place, a time. Is that the same catalog idea, applied to data? This is a topic for a later plan.</li>
+  </ol>
+</section>
+
+<footer>
+  <span>Source in the repository: <code>vendor/jarvisos/MORPHING_UI.md</code>. Measurements: <code>tests/emulator/voice.sh</code>, 8 October 2026, emulator only.</span>
+  <span>Written with Claude for Kevin Ocansey and the JarvisOS team.</span>
+</footer>
+
+</div>
