@@ -505,3 +505,73 @@ Answered by the first slice, for now (Kevin may change them):
   with `platform_apis` and installed in `/system` to use the `@hide` API.
 - Nothing has run on a phone.
 
+
+## 12. The tool contract: action, values, state
+
+> Added 17 October 2026 from a discussion with Kevin. Not built.
+
+### 12.1 The idea
+
+In test mode, the Jarvis app shows the real state next to each built-in tool:
+battery 33 %, flashlight on, brightness 40 %. Thus a person can see what a
+tool did, not only that it replied "done". Today this works only for the
+built-in tools, because `DeviceState.java` in the Jarvis app has code for each
+of them. A tool from a different app shows only its name.
+
+This section makes state part of each tool. Each tool, from each app, declares
+three things:
+
+| Part | Meaning | Examples |
+|------|---------|----------|
+| Action | What the tool does. | "Plays a cell." "Turns the torch on or off." |
+| Values | Each argument, with its type and its permitted values. | `cell` integer 0 to 8; `level` 0 to 100 %; `on` true or false |
+| State | What the tool controls looks like now. The app reads it. Jarvis does not guess it. | battery 33 %; torch on; `evaluate_moves` off; board `X...O....` |
+
+Then Jarvis shows each tool of each app in the same way, with no code for one
+app in Jarvis. A developer gets this when the developer declares the values
+and the state.
+
+### 12.2 Values
+
+Each argument declares its type and its range or its list of values in a form
+that a program can read, not only in the description:
+
+```xml
+<param name="cell" type="integer" min="0" max="8" choices-from="legal" />
+<param name="level" type="integer" min="0" max="100" unit="%" />
+<param name="on" type="boolean" />
+```
+
+`choices-from` names a field in the state. It gives the values that are
+permitted now (example: the empty cells). The grammar of the model (11.8) and
+the value picker in test mode use the same list.
+
+### 12.3 State
+
+- Each app can declare one read-only state tool. Example: `get_state`.
+- Each tool names the part of that state that it controls. Example:
+  `evaluate_moves` controls `tools.evaluate_moves` (on or off).
+- Jarvis reads the state when it needs it (pull). Session events (section 11)
+  continue to push the moments that matter.
+- The built-in tools use the same contract. `DeviceState` becomes the state
+  tool of the built-in tools.
+
+### 12.4 Uses
+
+1. **Test mode.** The Tools tab shows each tool with its values and its state,
+   for each app. A person can run a tool with a picker that offers only the
+   permitted values. For a game, this is "play the side of Jarvis by hand".
+   This tests the tool before a model uses it.
+2. **The model checks its work.** After a call, Jarvis reads the state again.
+   Example: torch on → is the torch on? Roadblock 34 was a tool that replied
+   "success" and changed nothing.
+3. **Sessions.** The session panel in test mode shows: session open or
+   closed, the open tools, the permitted values, the last call and its time.
+
+### 12.5 Open questions
+
+1. Pull only, or can an app also push a change of state outside a session?
+2. Does a run from test mode obey the tool fence of a session? Proposal: yes,
+   so that the test shows real behaviour.
+3. How often does test mode read the state? Proposal: when the screen opens,
+   after each call, and on a refresh button.

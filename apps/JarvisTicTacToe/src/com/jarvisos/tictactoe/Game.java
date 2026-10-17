@@ -59,6 +59,10 @@ public final class Game implements JarvisSession.Listener {
     private Turn mTurn = Turn.OVER;
     private int mPlayerLastMove = -1;
     private JarvisSession mSession;
+    /** Listens to mSession only; callbacks from an older session are dropped. */
+    private CurrentSession mListener;
+    /** Why Jarvis left a game still running, or null. The game then plays O itself. */
+    private String mJarvisLeft;
     /** Jarvis's last line (say), shown in the speech bubble. */
     private String mBubble;
     /** One line about what happened, for the status bar. */
@@ -99,13 +103,15 @@ public final class Game implements JarvisSession.Listener {
         mBoard = new Board();
         mTurn = Turn.PLAYER;
         mPlayerLastMove = -1;
+        mJarvisLeft = null;
         mBubble = null;
         setThinking(false);
         // AX: the app may close session tools it declared, never open others.
         // This is how the evaluate_moves switch reaches Jarvis.
         String[] closed = mEvaluateMovesOn ? null : new String[] {"evaluate_moves"};
         try {
-            mSession = JarvisSession.start(mContext, SESSION, closed, this);
+            mListener = new CurrentSession();
+            mSession = JarvisSession.start(mContext, SESSION, closed, mListener);
             mStatus = "Your move. You are X, Jarvis is O.";
         } catch (JarvisException e) {
             Log.w(TAG, "No session", e);
@@ -118,11 +124,8 @@ public final class Game implements JarvisSession.Listener {
 
     /** The screen left the foreground. Jarvis would end the session anyway; say so first. */
     void onScreenStopped() {
-        if (mTurn != Turn.OVER) {
-            mTurn = Turn.OVER;
-            mStatus = "Game stopped: the app was left.";
-        }
         endSession(null);
+        if (mTurn != Turn.OVER) jarvisLeft("the app was left");
         setThinking(false);
     }
 
@@ -131,6 +134,7 @@ public final class Game implements JarvisSession.Listener {
         // AX: an optional last event tells Jarvis how it ended.
         mSession.end(event, event != null ? state().toString() : null);
         mSession = null;
+        mListener = null;
     }
 
     // -------------------------------------------------------------------------
@@ -144,6 +148,10 @@ public final class Game implements JarvisSession.Listener {
         // AX: events are data. Jarvis keeps the last few for its next prompt.
         if (mSession != null) mSession.event("player_moved", json("cell", cell, "board", mBoard));
         if (finishIfOver()) return;
+        if (mJarvisLeft != null) {
+            gamePlaysForJarvis();
+            return;
+        }
 
         mTurn = Turn.JARVIS;
         mStatus = "Jarvis's move.";
@@ -232,16 +240,68 @@ public final class Game implements JarvisSession.Listener {
         changed();
     }
 
+    /**
+     * Passes on one session's callbacks while it is the current session.
+     * Jarvis tells the app that a session ended after the app has already
+     * started the next one (a new game, or the start tool opening the game),
+     * and that late onEnded must not end the new game.
+     */
+    private final class CurrentSession implements JarvisSession.Listener {
+        @Override public void onTurnStarted(String event) {
+            if (mListener == this) Game.this.onTurnStarted(event);
+        }
+        @Override public void onSay(String text) {
+            if (mListener == this) Game.this.onSay(text);
+        }
+        @Override public void onTurnEnded(boolean done, String detail) {
+            if (mListener == this) Game.this.onTurnEnded(done, detail);
+        }
+        @Override public void onEnded(String reason) {
+            if (mListener == this) Game.this.onEnded(reason);
+            else Log.i(TAG, "Ignored the end of an older session: " + reason);
+        }
+    }
+
     @Override
     public void onEnded(String reason) {
         Log.i(TAG, "Session ended: " + reason);
         mSession = null;
-        if (mTurn != Turn.OVER) {
-            mTurn = Turn.OVER;
-            mStatus = "Jarvis left the game (" + reason + ").";
-        }
+        mListener = null;
+        if (mTurn != Turn.OVER) jarvisLeft(reason);
         setThinking(false);
         changed();
+    }
+
+    /**
+     * Jarvis left a game that is still running. The game stays playable: the
+     * app plays O itself until the next "Play with Jarvis". An app must work
+     * without its agent.
+     */
+    private void jarvisLeft(String reason) {
+        mJarvisLeft = reason;
+        setThinking(false);
+        if (mTurn == Turn.JARVIS) {
+            gamePlaysForJarvis();
+        } else {
+            mStatus = leftStatus();
+            changed();
+        }
+    }
+
+    /** The game's own move for O, from the game tree, once Jarvis has left. */
+    private void gamePlaysForJarvis() {
+        List<Integer> best = mBoard.best(Board.JARVIS);
+        List<Integer> cells = best.isEmpty() ? mBoard.legal() : best;
+        if (cells.isEmpty()) return;
+        mTurn = Turn.JARVIS;
+        jarvisMoves(cells.get(0));
+        if (mTurn != Turn.OVER) mStatus = leftStatus();
+        changed();
+    }
+
+    private String leftStatus() {
+        return "Your move. Jarvis left (" + mJarvisLeft + "), so the game plays O."
+                + " Touch Play with Jarvis for a new game.";
     }
 
     private void jarvisGaveUp(String why) {
