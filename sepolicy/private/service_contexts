@@ -1,2 +1,3 @@
 jarvis                                    u:object_r:jarvis_service:s0
 jarvis_tools                              u:object_r:jarvis_tools_service:s0
+jarvis_session                            u:object_r:jarvis_session_service:s0

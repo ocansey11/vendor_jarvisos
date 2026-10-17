@@ -65,6 +65,18 @@ the minimal stand-ins in `tests/stubs`.
   including malformed output, and recording the result on the session.
 - **DreamWorkerTest** (9) — building a session summary and merging extracted
   facts into the user context.
+- **CompletionTest** (11), **FlatVectorIndexTest** (10), **NeedleTest** (4),
+  **PcmTest** (5) — engine replies, the vector index, Needle, audio.
+- Sessions (Agent Experience, 17 Oct 2026):
+  **SessionManifestTest** (6) — the sample game's real manifest parses;
+  broken manifests are refused whole. **SessionToolsTest** (8) — the tool
+  fence inside and outside a session, `say` length and emoji-safe cutting,
+  the event size and rate limits. **SessionTurnTest** (9) — a scripted
+  model against a fake game: what the model is offered (only the open tools,
+  the legal cells as an enum, the grammar options), retries after an
+  illegal move or a closed tool, giving up, one `say` a turn, the line after
+  a silent move, the prompt's parts and its size budget.
+  **BoardTest** (6) — the sample game's rules and `evaluate_moves`.
 
 ## Emulator boot (layer 3)
 
@@ -73,7 +85,8 @@ tmux new -d -s build vendor/jarvisos/tests/emulator/build.sh   # full image, 1-3
 tmux new -d -s emu   vendor/jarvisos/tests/emulator/run.sh     # headless boot
 vendor/jarvisos/tests/emulator/check.sh                        # once it has booted
 m JarvisAlarmDemo && vendor/jarvisos/tests/emulator/app-tools.sh   # app-tool path, 22 checks
-vendor/jarvisos/tests/emulator/jarvis-app.sh                   # the Jarvis app, 16 checks
+vendor/jarvisos/tests/emulator/jarvis-app.sh                   # the Jarvis app, 19 checks
+vendor/jarvisos/tests/emulator/tictactoe.sh [--quick]          # sessions: the game vs Jarvis, ~15 min (24 checks with --quick)
 ```
 
 `check.sh` prints, in order: whether boot completed; whether `system_server`
@@ -96,6 +109,24 @@ refused without it; the status line matches `cmd jarvis status`; a tool run
 from the Tools tab shows its reply; a message typed in Chat shows the
 service's own reply. To try a change to the app without an image build:
 `m Jarvis && adb install -r $ANDROID_PRODUCT_OUT/system/app/Jarvis/Jarvis.apk`.
+
+`tictactoe.sh` tests sessions (`AGENT_EXPERIENCE.md` section 11) with the
+sample game `apps/JarvisTicTacToe`, which is part of the image: the session
+manifest is read at boot; outside a session `move` is refused and not
+offered to Needle; the "Play with Jarvis" button opens a session; during it
+`set_alarm` and `open_app` are refused and `say` reaches the game's speech
+bubble; Home and killing the app end it. Without `--quick` it then plays
+three whole games with uiautomator taps (the player: win, else block, else
+centre, corners, edges): `evaluate_moves` on, off, and a game started with
+`cmd jarvis query "let's play tic-tac-toe"`. Each Jarvis turn's trace
+(model calls, tool calls, times, prompt tokens reused) is printed and kept in
+`~/tictactoe-*.log`; `cmd jarvis session` shows the last one. It needs the
+chat model; Needle is used for the typed start request. The taps are
+synthetic: no person has played it yet.
+
+To watch a game from a PC, see the scrcpy note in the test-setup memory
+(`ssh -N -L 5555:localhost:5555 root@<server>` then `scrcpy`), open
+"Tic-tac-toe" on the emulator and touch Play with Jarvis.
 
 **A model on the emulator.** llama.cpp (`vendor/llama.cpp`) is the engine
 there; Cactus is arm64-only. The emulator must be started by `run.sh`, which
@@ -144,8 +175,8 @@ newer.
 | Layer | Result |
 |-------|--------|
 | 1. ObjectBox store test | **36 of 36 checks pass** (ObjectBox 4.0.2 native, Linux x86_64) |
-| 2. Unit tests | **58 of 58 pass** on 8 Oct 2026 (DreamWorker 9, RouterNode 12, ToolNodeParsing 8, Completion 10, FlatVectorIndex 10, Needle 4, Pcm 5) |
-| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **19 of 19** (`tests/emulator/jarvis-app.sh`). With llama.cpp and a model installed (5 Oct 2026): plain-English requests call tools and get answers, 10 to 26 s each. With Needle 3 and Whistle (8 Oct 2026): typed and spoken tool requests in about 0.25 s, **29 of 29** (`tests/emulator/voice.sh`) |
+| 2. Unit tests | **88 of 88 pass** on 17 Oct 2026 (58 before, plus sessions: SessionManifest 6, SessionTools 8, SessionTurn 9, Board 6, Completion +1) |
+| 3. Emulator boot | **Boots; service ready; 22 of 22 app-tool checks pass** — after four fixes, see below. Jarvis app (5 Oct 2026): **19 of 19** (`tests/emulator/jarvis-app.sh`). With llama.cpp and a model installed (5 Oct 2026): plain-English requests call tools and get answers, 10 to 26 s each. With Needle 3 and Whistle (8 Oct 2026): typed and spoken tool requests in about 0.25 s, **29 of 29** (`tests/emulator/voice.sh`). Sessions (17 Oct 2026): **34 of 34** in a full `tictactoe.sh` run (three whole games), then **24 of 24** with `--quick` after a fresh boot; app-tool 22/22, Jarvis app 19/19, voice 29/29 again |
 | 4. Phone | no device yet |
 
 Layer 3 in detail (third and fourth boots, 15:52–15:54):
@@ -191,3 +222,24 @@ Found and fixed on the way (full detail, with before/after code, in
 - **Emulator:** any app could send the tool broadcast; it is now system-only.
 - **Emulator:** the dispatcher hid apps' error messages and ran tools with no
   arguments when given invalid JSON.
+
+### 17 October 2026 — sessions (Agent Experience), emulator
+
+What was seen, with Qwen3-1.7B Q8_0 through llama.cpp, the grammar on, and
+synthetic taps:
+
+- Jarvis plays whole games: three a run, from the button (twice) and from a
+  typed "let's play tic-tac-toe" (Needle chose `start_tic_tac_toe`; the reply
+  "... The Tic-tac-toe session with Jarvis is open." came in about 1 s).
+- Every move Jarvis made was legal; no turn gave up in the last three runs.
+- Turn times: 11 to 22 s with `evaluate_moves` (two model calls, the second
+  about 3.5 s thanks to prompt reuse); 24 to 31 s when a closing say-only
+  call is added (it is, when Jarvis has not spoken; about 8 to 9.5 s);
+  13 to 17 s with `evaluate_moves` off. A game's first call reads the whole
+  prompt cold: 13 to 19 s.
+- `evaluate_moves` on: draws (after the tool also named the best cells);
+  off: a loss. One game per setting really, since play is deterministic.
+- Found on the way: tool apps in the ROM were never scanned at boot
+  (roadblock 36), the grammar let the model talk before calling (37), the
+  model misread a correct tool (38), half an emoji hung the test (39).
+

@@ -234,3 +234,66 @@ register tools). Both are open decisions for Kevin.
 | 17:41 | Tool order fixed; `voice.sh` 37 of 41, the four failures one robotic clip |
 | 17:44 | 29 of 29; older suites still pass |
 
+
+## 17 Oct 2026, evening: Jarvis plays tic-tac-toe (Agent Experience, first slice)
+
+- **Kevin** decided the "ask and it acts" demo was not enough and designed,
+  in chat with Claude, "Agent Experience (AX)": an app declares a session
+  once in its APK (rules, persona, session tools, events), sends only data
+  while it runs, and Jarvis builds its own prompt and may only use that
+  session's tools. He asked for the first working slice: a tic-tac-toe game
+  he plays against Jarvis on the emulator, started from a button and from
+  Jarvis, with a switch for `evaluate_moves` for an on/off experiment in the
+  talk. "Two apps match, Jarvis asks" was left out on purpose ("we will sort
+  this out later").
+- **Claude** (a sub-agent, working alone for the evening) built it:
+  the `jarvis_session` Binder service and `android.jarvis.JarvisSession`
+  (no permission; the service checks the caller's package and that it is on
+  screen), the session manifest parser, the tool fence inside
+  `ToolDispatcher`, the turn runner (prompt from manifest + memory + events,
+  retries, give-up), grammar options in the llama.cpp JNI, reuse of the
+  model's cache between calls, the game (`apps/JarvisTicTacToe`, an ordinary
+  app with comments on every AX step), 30 new unit tests and
+  `tests/emulator/tictactoe.sh`.
+- **Result on the emulator** (synthetic taps through uiautomator, typed
+  start request; no person, no phone): three whole games a run, two started
+  by the button and one by `cmd jarvis query "let's play tic-tac-toe"`;
+  the fence refuses `set_alarm` and `open_app` during a game and `move`
+  after it; killing the app or pressing Home ends the session. Final full
+  run 34 of 34 before the test was hardened, then the quick part 24 of 24
+  after a fresh boot. Unit tests 88 of 88; old suites unchanged: tool checks
+  22 of 22, app checks 19 of 19, voice 29 of 29, store 36 of 36.
+- **Times per Jarvis turn** (Qwen3-1.7B Q8_0, emulator): 11 to 22 s with
+  `evaluate_moves` and no closing line; 24 to 31 s with the closing
+  say-only call (about 8 to 9.5 s of it); 13 to 17 s with `evaluate_moves`
+  off (say and move in one reply). The first call of a game takes 13 to 19 s
+  of prompt reading; with the cache, a turn's second call takes about 3.5 s.
+- **The experiment, honestly:** with `evaluate_moves` on (and the tool
+  naming the best cells), Jarvis drew; off, it lost. Before the tool named
+  the best cells, Jarvis lost with it on too, because it misread the table
+  (roadblock 38). Temperature 0 and a fixed test player mean each setting is
+  one game repeated, not a sample.
+- **Not done / not proven:** nothing on a phone; no voice in a session; no
+  facts about the user (none are stored on the emulator, and the prompt says
+  so); "two apps match" (hooks only); an SDK for apps outside the ROM (the
+  game is in `/system` only because the API is `@hide`).
+- **Claude's slips:** a unit test with the wrong expectation; three tries
+  before the model stopped writing prose before its calls (roadblock 37);
+  a test that waited on the screen and hung on half an emoji (roadblock
+  39); `pkill -f` killing its own shell again; editing the test while it
+  ran; a test run that set a real alarm because it did not check that the
+  session was open first (roadblock 40).
+
+| Time | Event |
+|------|-------|
+| 18:50 | First image build started (new framework API, service, sepolicy, JNI, game) |
+| 18:55 | Unit tests 85 of 85 (after fixing a wrong test) |
+| 19:31 | Image built, 40 min 40 s; `/data` wiped, models reinstalled |
+| 19:32 | Game's tools missing at boot; the boot scan bug (roadblock 36) |
+| 19:37 | Fence and session checks 21 of 21 |
+| 19:40 | First Jarvis turn: words first, then a forced move; 32 s |
+| 19:58 | First full game: a draw, but Jarvis misread its tool (roadblock 38) |
+| 20:01 | The test hangs on half an emoji (roadblock 39) |
+| 20:24 | Calls only, cache reuse: 34 of 34, turns 11 to 22 s |
+| 20:51 | With the closing line and "best": draws with the tool, a loss without |
+| 21:05 | Quick checks 24 of 24 after a fresh boot; old suites pass |

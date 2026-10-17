@@ -1,6 +1,8 @@
 # AGENT_EXPERIENCE.md — Agent Experience (AX)
 
-> Plan for discussion. Nothing in this document is built, except the tools.
+> Plan for discussion. Built: the tools, and since 17 October 2026 the first
+> slice of sessions (section 11, emulator only). Views (sections 1 to 10) are
+> not built.
 > Written 8 October 2026 (as MORPHING_UI.md) and 17 October 2026, to the rules
 > of ASD-STE100 (Simplified Technical English): short sentences, active voice,
 > one meaning for each term. It was not checked with an STE checker.
@@ -194,9 +196,16 @@ package starts before the first test on a phone.
 
 ## 11. Agent Experience (AX)
 
-> Added 17 October 2026 from a discussion with Kevin. Nothing in this section
-> is built. Use the name "Agent Experience (AX)", not "Agentic Interaction":
-> the short form of that name is "AI", which is confusing in a talk about AI.
+> Added 17 October 2026 from a discussion with Kevin. Use the name "Agent
+> Experience (AX)", not "Agentic Interaction": the short form of that name is
+> "AI", which is confusing in a talk about AI.
+>
+> **Status, 17 October 2026 (evening):** the first slice is built and seen
+> working on the emulator, with synthetic taps, not on a phone and not by a
+> person: the tic-tac-toe game (section 11.9) is played to the end against
+> Jarvis, started from the app and from Jarvis. Each subsection says what is
+> built. Section 11.11 lists what is different from the plan and why;
+> section 11.12 lists what is not built.
 
 ### 11.1 The idea
 
@@ -209,7 +218,7 @@ AX has three parts:
 |------|-----------|-----------|-------|
 | Tools | App to Jarvis | Actions that Jarvis can do in the app. | Built. `TOOL_REGISTRY.md`. |
 | Views | Jarvis to person | The shape of a reply on the surface. | Sections 1 to 10 of this plan. |
-| Sessions | App and Jarvis, live | Jarvis takes part in the app while it runs. Example: a game with turns. | This section. |
+| Sessions | App and Jarvis, live | Jarvis takes part in the app while it runs. Example: a game with turns. | This section. First slice built, 17 Oct 2026. |
 
 ### 11.2 New terms
 
@@ -240,17 +249,55 @@ not name a user. It does not contain data about a user.
     <persona>Cheeky, competitive, one-liners. Never mean.</persona>
     <tools>get_state, evaluate_moves, move</tools>
     <events>player_moved, your_turn, player_said, game_over</events>
+    <turn event="your_turn" tool="move" arg="cell" choices="legal" />
 </session>
 ```
+
+**Built.** `SessionManifest` reads this file when the app is installed (and
+at boot), next to the tools, in `SessionRegistry` (in memory; every app is
+read again at boot). The sample's real file is
+`apps/JarvisTicTacToe/res/xml/jarvis_session.xml`. Jarvis refuses a manifest
+as a whole when it breaks a rule: rules over 1,200 characters, persona over
+300, more than 8 tools or 12 events, names that are not plain identifiers,
+`say` in the tool list (Jarvis gives it), or a `<turn>` that uses an
+undeclared event or tool.
+
+`<turn>` is new (section 11.11): it tells Jarvis which event wakes it, which
+tool call ends its turn, and which field of the event lists the legal values
+of that tool's argument.
+
+The session tools are ordinary tool receivers (as in the alarm demo). The
+difference: they are closed outside the session, and models are not offered
+them.
 
 ### 11.4 Events (live)
 
 ```java
-JarvisSession s = jarvis.startSession("tic_tac_toe");
+JarvisSession s = JarvisSession.start(context, "tic_tac_toe", closedTools, listener);
 s.event("player_moved", "{\"cell\":0,\"board\":\"X........\"}");
 s.event("your_turn",    "{\"board\":\"X........\",\"legal\":[1,2,3,5,6,7,8]}");
-s.end("game_over",      "{\"winner\":\"kevin\"}");
+s.end("game_over",      "{\"winner\":\"player\"}");
 ```
+
+**Built** as `android.jarvis.JarvisSession` (`@hide`), over a new Binder
+service `jarvis_session` (`IJarvisSessionService`, `IJarvisSessionCallback`).
+It needs no permission: any app can find it (SELinux type
+`jarvis_session_service`, an `app_api_service`), but Jarvis checks that the
+caller's package declares the session and that the app is on screen. The
+listener gets `onTurnStarted`, `onSay`, `onTurnEnded(done, detail)` and
+`onEnded(reason)` on the main thread. The app may close session tools it
+declared (`closedTools`), never open others; this is how the game's
+evaluate_moves switch works.
+
+Limits: an event must be one the manifest lists; its data must be a JSON
+object of at most 2,048 characters; at most 10 events at once and then 2 a
+second (`EventLimiter`).
+
+**Built: Jarvis's memory in the prompt.** Jarvis reads its facts about the
+user from `UserContext` (written by `DreamWorker`). On the emulator there are
+none, because `DreamWorker` has never been seen running (see the known
+gaps). The prompt then says so: "Nothing is stored about the user yet." It
+does not invent facts. Personalisation is therefore built but unproven.
 
 The app does not send prompts. Jarvis makes the prompt for each turn from
 these parts:
@@ -285,6 +332,27 @@ Reasons:
 4. A session ends when the app goes to the background or stops. Then the
    session tools close.
 
+**Built.** The fence is in `ToolDispatcher`, on the one route every tool
+call takes (agent loop, Needle fast path, session turn, `cmd jarvis tool`):
+
+- During a session: only `say` and the session's open tools run, and a tool
+  name is looked up in the session's app only (two games can both have
+  `move`). Anything else gets "Error: refused. During the Tic-tac-toe
+  session Jarvis can only use say, get_state, evaluate_moves, move; ...".
+- Outside a session: session tools are refused, and they are left out of
+  the tool lists the chat model and Needle see.
+- The session ends when the app's uid leaves the foreground (an
+  `ActivityManager` importance listener with "visible" as the cut), when its
+  callback Binder dies, when the app ends it, or when another session
+  starts. One session at a time.
+
+Seen on the emulator (`tests/emulator/tictactoe.sh`): `set_alarm` and
+`open_app` are refused during a game; `move` and `get_state` are refused
+after the Home button ended it.
+
+Still true, and not solved: the rules and event data are text the model
+reads (rule 1).
+
 ### 11.6 How a session starts
 
 There are two ways. Both use the same session.
@@ -293,6 +361,15 @@ There are two ways. Both use the same session.
 |-------|----------|
 | From the app | The person touches "Play with Jarvis". The app calls `startSession`. A button stands in for the wake word "Hey Jarvis" until wake word detection exists. |
 | From Jarvis | The person says "Hey Jarvis, let's play tic-tac-toe". Jarvis finds the start tool in the registry. The start tool opens the app. The app calls `startSession` when it is ready. If the app does not do this in a set time, Jarvis tells the person. |
+
+**Built, both.** From Jarvis: the start tool is an ordinary tool, so the
+Needle fast path or the chat model can choose it. Jarvis sends its call with
+permission to start an activity from the background (a start tool's app is
+usually not on screen), then waits up to 15 s for the app's `startSession`.
+The reply says which: "... The Tic-tac-toe session with Jarvis is open." or
+"... did not start a session with Jarvis within 15 seconds." On the
+emulator, `cmd jarvis query "let's play tic-tac-toe"` went through Needle
+and answered in about 1 s with the session open. Only typed, not spoken.
 
 ### 11.7 More than one match: Jarvis asks
 
@@ -309,6 +386,11 @@ The surface already has shapes for this: Chips (section 3) for a choice,
 Sheet for a missing argument. The exact rule (how near is "near", how many
 choices, voice-only use) is not designed yet. Kevin: "we will sort this out
 later".
+
+**Not built (on purpose).** Two hooks mark the place: a `TODO(AX 11.7)` in
+`ToolDispatcher.findAndDispatch` (today the first registered tool of a name
+wins) and a warning in `SessionRegistry` when two apps declare the same
+start tool.
 
 ### 11.8 Turns
 
@@ -327,6 +409,32 @@ later".
 6. A turn takes approx. 20 seconds with Qwen3-1.7B on the emulator. The app
    shows "Jarvis is thinking".
 
+**Built** (`session/SessionTurn.java`), with these results on the emulator:
+
+- The turn runs on its own thread; `sendEvent` returns at once. The chat
+  model is called with only `say` and the open session tools, and with the
+  turn tool's argument narrowed to the event's legal values (a JSON-schema
+  `enum`).
+- **Grammar: yes, it was small to add.** Our JNI passed no options before;
+  it now takes `tool_choice`, `parallel_tool_calls`, `constrain_tools` (use
+  the grammar llama.cpp builds from the tool schemas), `calls_only` (start
+  the reply with the template's tool-call marker) and a raw `grammar`. With
+  the grammar on, a `move` call cannot carry a cell outside the legal list.
+  "Required" alone did not stop the model writing words first (roadblock
+  37); `calls_only` does. `cmd jarvis session grammar on|off` switches it,
+  for comparison.
+- Retries: a refused tool, a failed `move`, or a reply with no call counts
+  as wrong. After a wrong one the model is told the legal values and given
+  only the turn tool. After 3 wrong ones (or 4 model calls) Jarvis gives up
+  and the app plays a random legal move. The game also moves at random if a
+  turn takes over 120 s.
+- If the turn ended without a word, one more short call that may only use
+  `say` gives the person a line about the move.
+- The JNI now keeps the last prompt in the model's cache and reuses the
+  shared beginning: a turn's second call reuses about 760 of 850 tokens.
+- Times on the emulator (Qwen3-1.7B Q8_0, 4 threads, x86_64 `-cpu host`):
+  see section 11.9 and `TESTING.md`.
+
 ### 11.9 First sample: tic-tac-toe, Kevin against Jarvis
 
 | Tool | Gives |
@@ -343,7 +451,24 @@ same game. This shows how much of the result comes from the tools.
 This sample is also the example for other developers: declare the session,
 send events, give tools.
 
+**Built:** `apps/JarvisTicTacToe` (package `com.jarvisos.tictactoe`), in the
+ROM as an ordinary, non-platform-signed app (it runs as `untrusted_app`; it
+is in `/system` only because `JarvisSession` is `@hide`). The AX parts are
+in `Game.java` and the manifest, with comments. Differences from the table
+above: `get_state` says `player_last_move`, not `kevin_last_move` (the app
+never names a user); `evaluate_moves` returns
+`{"best":[4],"cells":{"0":"loses: player wins in 3 moves","4":"draw",...}}`
+(roadblock 38: the model misread the table without `best`); the
+evaluate_moves switch is on the game screen and applies to the next game.
+
 ### 11.10 Open questions
+
+Answered by the first slice, for now (Kevin may change them):
+
+- Question 1: XML, like the tool declarations.
+- Question 4: no. One session at a time; a new one ends the old one.
+- Question 5: during a session the fence refuses every other tool, also for
+  requests typed into the Jarvis app. Jarvis can still answer in words.
 
 1. Is the session manifest XML (like the tool declarations) or JSON (like the
    views)?
@@ -353,3 +478,30 @@ send events, give tools.
 5. What does Jarvis say when the person speaks to it about something else
    during a session?
 6. Where does AX go in the sequence of section 8? Not decided.
+
+### 11.11 Where the build differs from the plan, and why
+
+| Plan | Built | Why |
+|------|-------|-----|
+| Manifest has rules, persona, tools, events | Also `<turn event tool arg choices>` | Jarvis must know which event wakes it, which call ends a turn, and what the legal values are, without a name like "your_turn" or "move" in Jarvis's code. |
+| `jarvis.startSession(...)` on JarvisManager | `JarvisSession.start(...)`, own Binder service `jarvis_session` | `jarvis` needs a signature permission that a game cannot hold. Sessions need none: the service checks the package and the foreground instead. |
+| `say` is a game tool | `say` is given by Jarvis and delivered through the session callback | Every session gets it the same way, and an app cannot declare a tool of that name. |
+| — | The app may close declared tools at start (`closedTools`) | The evaluate_moves switch for the talk's experiment. |
+| — | After a silent move, a say-only call | With only tool calls allowed, the model rarely spoke (roadblock 37). |
+| "The model decides" from the tool's table | The tool also names the best cells | Qwen3-1.7B misread the table (roadblock 38). |
+
+### 11.12 Not built yet
+
+- Two apps match: Jarvis asks (section 11.7). Hooks only.
+- The views of sections 1 to 10, and a card for Jarvis's line: the game
+  shows `say` in its own bubble.
+- Voice: the start request was typed (`cmd jarvis query`); a turn's line is
+  shown, not spoken.
+- `player_said` and any other free-text event; the sample sends only data.
+- Facts about the user: wired, but there are none on the emulator.
+- Persistence: sessions are in memory; a reboot ends them. The session
+  manifests are read again at boot.
+- An SDK for apps outside the ROM: today an app must be built in the tree
+  with `platform_apis` and installed in `/system` to use the `@hide` API.
+- Nothing has run on a phone.
+

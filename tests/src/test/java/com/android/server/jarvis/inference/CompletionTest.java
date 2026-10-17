@@ -95,4 +95,20 @@ class CompletionTest {
     void nullReply() {
         assertNull(Completion.parse(null));
     }
+
+    @Test
+    @DisplayName("Every call of a reply is kept in order, with grammar and timing details")
+    void severalCalls() {
+        Completion c = Completion.parse("{\"success\":true,\"response\":\"\",\"constrained\":true,"
+                + "\"prefill_tokens\":812,\"total_time_ms\":10500.5,\"function_calls\":["
+                + "{\"name\":\"say\",\"arguments\":{\"text\":\"Watch this.\"}},"
+                + "{\"name\":\"move\",\"arguments\":{\"cell\":4}}]}");
+        assertEquals("say", c.toolName);
+        assertEquals(2, c.calls.length());
+        assertEquals("move", c.calls.getJSONObject(1).getString("name"));
+        assertEquals(4, c.calls.getJSONObject(1).getJSONObject("arguments").getInt("cell"));
+        assertTrue(c.constrained);
+        assertEquals(812, c.promptTokens);
+        assertEquals(10500, c.engineMs);
+    }
 }

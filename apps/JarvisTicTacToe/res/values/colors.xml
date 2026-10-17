@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#FFF6F7FB</color>
+    <color name="text">#FF1D2433</color>
+    <color name="cell">#FFFFFFFF</color>
+    <color name="cell_win">#FFFFE08A</color>
+    <color name="bubble">#FF2F5BEA</color>
+    <color name="bubble_text">#FFFFFFFF</color>
+</resources>

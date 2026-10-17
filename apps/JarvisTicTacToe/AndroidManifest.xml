@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tic-tac-toe against Jarvis: the sample app for Agent Experience (AX),
+  vendor/jarvisos/AGENT_EXPERIENCE.md section 11. What makes it work with
+  Jarvis is all declared here:
+    1. the session manifest (meta-data com.jarvisos.session), and
+    2. one receiver per tool, as in apps/JarvisAlarmDemo. Three are session
+       tools (listed in the session manifest): Jarvis can call them only
+       during a session. start_tic_tac_toe is an ordinary tool, the way in.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.jarvisos.tictactoe">
+
+    <application
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+
+        <meta-data android:name="com.jarvisos.session" android:resource="@xml/jarvis_session" />
+
+        <activity android:name=".GameActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The start tool: found by Jarvis when the person asks to play. -->
+        <receiver android:name=".StartTicTacToeTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="start_tic_tac_toe" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="Open the tic-tac-toe game (noughts and crosses) and start a new game between the user and Jarvis. Use this when the user wants to play tic-tac-toe." />
+        </receiver>
+
+        <!-- Session tools. -->
+        <receiver android:name=".GetStateTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="get_state" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="Get the tic-tac-toe board, whose turn it is and the legal cells." />
+        </receiver>
+
+        <receiver android:name=".EvaluateMovesTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="evaluate_moves" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="Which legal cells are best for you now (best), and for each legal cell what playing it leads to with best play after: wins, draw or loses, and in how many moves, and whether it blocks the player." />
+        </receiver>
+
+        <receiver android:name=".MoveTool" android:exported="true">
+            <intent-filter>
+                <action android:name="com.jarvisos.TOOL" />
+            </intent-filter>
+            <meta-data android:name="com.jarvisos.tool.name" android:value="move" />
+            <meta-data android:name="com.jarvisos.tool.description"
+                android:value="Play your mark (O) in one empty cell. This ends your turn." />
+            <meta-data android:name="com.jarvisos.tool.input_schema"
+                android:resource="@xml/tool_move_schema" />
+        </receiver>
+
+    </application>
+</manifest>

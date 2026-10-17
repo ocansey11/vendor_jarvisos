@@ -22,6 +22,7 @@ sourceSets {
         java {
             srcDirs = [
                 '../../../frameworks/base/services/jarvis/java',
+                '../apps/JarvisTicTacToe/src',
                 'src/test/java'
             ]
             // Only compile the files the agent tests actually need.
@@ -42,6 +43,16 @@ sourceSets {
             include 'com/android/server/jarvis/tools/ToolRecordCursor.java'
             include 'com/android/server/jarvis/core/MyObjectBox.java'
             include 'com/android/server/jarvis/core/JarvisScheduler.java'
+            // Sessions (AX): the parts with no Android in them.
+            include 'com/android/server/jarvis/session/SessionManifest.java'
+            include 'com/android/server/jarvis/session/SessionPrompt.java'
+            include 'com/android/server/jarvis/session/SessionTools.java'
+            include 'com/android/server/jarvis/session/SessionTurn.java'
+            include 'com/android/server/jarvis/session/EventLimiter.java'
+            include 'com/android/server/jarvis/session/*Test.java'
+            // The sample game's rules and move evaluation (apps/JarvisTicTacToe).
+            include 'com/jarvisos/tictactoe/Board.java'
+            include 'com/jarvisos/tictactoe/**Test.java'
         }
     }
 }
@@ -52,6 +63,9 @@ dependencies {
 
     // ObjectBox Java API — annotations + Box/Query interfaces (no native runtime needed)
     implementation 'io.objectbox:objectbox-java:4.0.3'
+
+    // XmlPullParser for SessionManifest, from the tree's prebuilts (no download)
+    testImplementation files('../../../prebuilts/misc/common/kxml2/kxml2-2.3.0.jar')
 
     // JUnit 5
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'

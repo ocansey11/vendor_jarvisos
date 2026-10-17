@@ -284,3 +284,55 @@ a bad call.
 
 *Explains:* 15, 18, and the design of `apps/JarvisAlarmDemo`.
 *Ask yourself:* why not have Jarvis keep its own list of alarms it has set?
+
+## 17. Direct boot: what a phone can see before you unlock it
+
+Android starts before the user unlocks the phone. Until then, app data that
+is encrypted with the user's credential is locked, so the system only treats
+components that say `directBootAware="true"` as available. A package query
+made in that window quietly leaves the others out; it does not fail.
+
+`system_server` (and so Jarvis) starts in that window. Anything Jarvis reads
+about installed apps at start-up must either ask for both kinds explicitly
+(`MATCH_DIRECT_BOOT_AWARE | MATCH_DIRECT_BOOT_UNAWARE`) or wait for the
+"user unlocked" moment.
+
+*Explains:* 36.
+*Ask yourself:* why did the alarm demo never show this bug? (It was always
+installed after boot, which goes through a different code path.)
+
+## 18. Constrained decoding, and why "required" was not enough
+
+A model picks each next token from the whole vocabulary. A **grammar**
+(llama.cpp's GBNF) removes, at every step, the tokens that would break a
+pattern, so the output must fit it: for example "a tool call whose `cell`
+is one of 1, 2, 3, 5". llama.cpp writes that grammar for you from the tools'
+JSON schemas. A **lazy** grammar only starts when a trigger word appears
+(the tool-call marker); before that the model writes freely.
+
+The catch (roadblock 37): the grammar llama.cpp writes for Qwen3's template
+allows free text before the first call, even when a call is required. The
+fix was to start the reply with the marker ourselves, so the grammar is in
+control from the first token.
+
+*Explains:* 37.
+*Ask yourself:* if the grammar guarantees a legal cell, why does Jarvis still
+need the tool fence? (The grammar is in the model's process and only shapes
+text; the fence is in the dispatcher and decides what actually runs.)
+
+## 19. The prompt cache (KV cache) and prefix reuse
+
+Reading a prompt ("prefill") is most of a turn on a CPU: 750 tokens took
+about 16 s on the emulator. While reading, the model stores intermediate
+results for every token (the **KV cache**). If the next prompt starts with
+the same tokens, those results can be kept and only the new tail read.
+
+A session turn is ideal for this: the system message and the tools are the
+same every time, and a turn's second call repeats all of its first. After
+the change, about 760 of 850 tokens were reused and the second call took
+about 3.5 s instead of about 11.
+
+*Explains:* 37 (the speed half) and the turn times in section 11.8 of
+`AGENT_EXPERIENCE.md`.
+*Ask yourself:* why does the order of a prompt's parts matter for this?
+(Only a shared *beginning* can be reused; put what never changes first.)

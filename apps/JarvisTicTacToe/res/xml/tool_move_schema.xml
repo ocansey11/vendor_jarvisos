@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<params>
+    <param name="cell" type="integer" required="true" description="The empty cell to play, 0 to 8" />
+</params>

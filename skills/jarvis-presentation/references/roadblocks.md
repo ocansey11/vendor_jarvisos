@@ -42,6 +42,13 @@ notes; entries 7 onward were written as they happened.
 31. Confidence that moved when the list was reordered
 32. The robot voice Jarvis could not understand
 33. The phone build was harder than the emulator hack
+34. "Right tool" was not "it worked": the shell ran tools as the shell
+35. "How are you doing today" read the notifications
+36. Apps in the ROM had no tools after boot
+37. "Required" did not mean "no talking"
+38. The tool did the maths; the model misread it (open)
+39. Half an emoji stopped the test
+40. Smaller ones from the tic-tac-toe day
 
 ---
 
@@ -1045,3 +1052,205 @@ notes; entries 7 onward were written as they happened.
 - **Proven to:** seen in the app by a human, first try.
 - **For the talk:** the test said "safe"; the first real user said
   "how are you" and Jarvis read their notifications.
+
+## 36. Apps in the ROM had no tools after boot
+
+- **When:** 17 Oct 2026, 19:32, first boot of the image with the tic-tac-toe
+  game (the first tool app ever built into the ROM rather than installed
+  with `adb install`).
+- **Expected:** `cmd jarvis tools` lists the game's four tools.
+- **What happened:** only the 16 built-in tools. The log:
+
+  ```
+  19:32:33.418 ToolScannerService: Initial scan — found 0 tool receiver(s)
+  19:32:33.420 JarvisSessions: Session declared: com.jarvisos.tictactoe/tic_tac_toe ...
+  19:32:36.055 keystore2: on_device_unlocked(user_id=0, ...)
+  ```
+
+  Ten minutes later, `cmd package query-receivers -a com.jarvisos.TOOL`
+  listed all four receivers.
+- **Cause:** the scan runs while `system_server` starts, before the user is
+  unlocked. Until then a package query only returns components that are
+  "direct boot aware", and no tool app is. The session manifest was found in
+  the same second because it was read through `getInstalledApplications`,
+  which still sees the app. This has been there since the port; the alarm
+  demo never showed it because `app-tools.sh` installs it after boot, which
+  goes through the "package added" path instead.
+- **Before** (`services/jarvis/.../tools/ToolScannerService.java`):
+
+  ```java
+  List<ResolveInfo> resolved = mPackageManager.queryBroadcastReceivers(
+          queryIntent, PackageManager.GET_META_DATA);
+  ```
+
+- **After:**
+
+  ```java
+  private static final int SCAN_FLAGS = PackageManager.GET_META_DATA
+          | PackageManager.MATCH_DIRECT_BOOT_AWARE | PackageManager.MATCH_DIRECT_BOOT_UNAWARE;
+  ...
+  List<ResolveInfo> resolved = mPackageManager.queryBroadcastReceivers(
+          queryIntent, SCAN_FLAGS);
+  ```
+
+- **Proven to:** emulator. After the rebuild, `cmd jarvis status` right after
+  boot shows 2 apps and 20 tools.
+- **Commit:** frameworks_base `a9ab7a3f797c` (with the session work); the JNI changes of entry 37 are llama.cpp `4b621acd5`.
+- **For the talk:** every app we had tested was installed after the phone
+  was up. The first one shipped inside the ROM was invisible until it was
+  reinstalled. On a phone, that would have been every preinstalled app.
+
+## 37. "Required" did not mean "no talking"
+
+- **When:** 17 Oct 2026, 19:40 to 20:24, the first turns of Jarvis in the
+  game (Qwen3-1.7B, llama.cpp, emulator).
+- **Expected:** with llama.cpp's grammar on and `tool_choice` set to
+  "required", the reply can only be tool calls.
+- **What happened:** three versions in a row:
+  1. `tool_choice: auto`: the first turn answered in words, "Let's see if I
+     can win! I'll play in cell 5.", and called nothing (18.6 s). The retry
+     moved.
+  2. `tool_choice: required`: words still came first, then the call. Once
+     the words were "I'll play in cell 5 to complete my move! 🎮 ... 🎯. 🎯.
+     🎯. 🎯." until the 160-token limit, with no call at all: 25.7 s wasted.
+  3. A new option, `calls_only`, meant to start the reply with the
+     template's tool-call marker. It changed nothing.
+- **Cause:** llama.cpp builds the grammar for Qwen3's template with its
+  "auto parser", which allows content before the calls even when calls are
+  required (`common/chat-auto-parser-generator.cpp`):
+
+  ```cpp
+  return ctx.reasoning_parser + p.optional(p.content(content_before_tools)) + tool_calls + p.end();
+  ```
+
+  Version 3 looked for the marker among the grammar's trigger words, but the
+  auto parser sets trigger words only for the lazy grammar (`tool_choice`
+  auto), so for "required" there were none.
+- **Fix** (`vendor/llama.cpp/jarvisos/llama_jni.cpp`): take the marker from
+  the same request rendered with `tool_choice` auto, feed it to the model
+  and the grammar as the start of the reply, and let the grammar continue:
+
+  ```cpp
+  common_chat_templates_inputs lazy_inputs = inputs;
+  lazy_inputs.tool_choice = COMMON_CHAT_TOOL_CHOICE_AUTO;
+  const common_chat_params lazy =
+          common_chat_templates_apply(engine->templates.get(), lazy_inputs);
+  for (const common_grammar_trigger& trigger : lazy.grammar_triggers) { ... forced = trigger.value; ... }
+  ...
+  for (llama_token token : marker) common_sampler_accept(constrained, token, true);
+  if (!decode_all(engine, marker)) { ... }
+  text = forced;
+  ```
+
+  In the same change the JNI keeps the last prompt in the model's cache and
+  reuses the part the next prompt shares (`reused_tokens` in the trace).
+- **Result:** no more words before calls; a turn went from 20 to 36 s to
+  11 to 22 s, and the second call of a turn from about 11 s to 3.5 s
+  (760 of 853 prompt tokens reused). The side effect: Jarvis stopped
+  talking, because the words had been its only speech. It now calls `say`
+  by itself sometimes, and otherwise gets one short say-only call after
+  its move (entry 40).
+- **Proven to:** emulator, `tictactoe.sh` 34 of 34 (run 3, 20:24).
+- **For the talk:** "constrained decoding" sounds absolute. In practice it
+  is whatever grammar the library writes for that model's template, and you
+  have to read it.
+
+## 38. The tool did the maths; the model misread it (open)
+
+- **When:** 17 Oct 2026, 19:58, game 1 of the second full run.
+- **What happened:** `evaluate_moves` (a full minimax search in the game)
+  returned:
+
+  ```
+  {"0":"draw","1":"loses: player wins in 3 moves","2":"draw","3":"loses: player wins in 3 moves", ...}
+  ```
+
+  and Qwen3-1.7B replied "playing in cell 1, 2, 3, 6, or 8 will result in a
+  draw. Playing in cells 0, 5, or 7 will result in the player winning ...
+  I'll choose to play in cell 1." It then lost games it had the table to
+  draw. In the third run it lost all three games, with the tool on and off.
+- **Cause:** a 1.7B model reading a nine-entry table. The tool was right
+  every time (checked by `BoardTest`).
+- **Change (not a fix):** the tool now also says which cells are best,
+  `{"best":[4],"cells":{...}}`, so the model only has to copy one number.
+  The idea from the plan, "the tools do the calculation, the model decides",
+  moved further towards the tool.
+- **Proven to:** emulator, and only as far as this: with `best` added,
+  Jarvis drew all three games it played with the tool on (runs 4 and 5, from
+  the button and from Jarvis) and lost the game with the tool off. Before
+  `best` it lost all three. The model runs at temperature 0 and the test's
+  player always answers the same way, so these are the same game repeated,
+  not a sample. The model still says odd things ("I played cell 1" lines
+  that read the tool's reply back).
+- **For the talk:** this is the on/off experiment's real answer so far: the
+  tool can be perfect and the result still depends on whether the model can
+  read it. Same model, same game, try it live.
+
+## 39. Half an emoji stopped the test
+
+- **When:** 17 Oct 2026, 20:01, game 2 of the second full run.
+- **What happened:** the game test stopped moving for 20 minutes after a
+  turn that had worked. Jarvis's line ended in a row of 🔥, cut to 160
+  characters: `...🔥🔥🔥���…`.
+- **Cause:** `say` cut the text with `substring(0, 159)`, which counts
+  UTF-16 units; an emoji is two, so the cut split one. The broken character
+  went to the screen, and `uiautomator dump` then failed on every try, so
+  the test could not read the board. The test also waited by reading the
+  screen, so it waited forever.
+- **Before** (`session/SessionTools.java`):
+
+  ```java
+  return text.length() <= MAX_SAY_CHARS ? text : text.substring(0, MAX_SAY_CHARS - 1) + "…";
+  ```
+
+- **After:**
+
+  ```java
+  text = text.replaceAll("</?think>", "").trim();   // Qwen also leaked "</think>"
+  if (text.codePointCount(0, text.length()) <= MAX_SAY_CHARS) return text;
+  return text.substring(0, text.offsetByCodePoints(0, MAX_SAY_CHARS - 1)) + "…";
+  ```
+
+  The test now waits on `cmd jarvis session` (is a turn running?) and reads
+  the screen only after.
+- **Proven to:** unit test (`sayCutsWholeCharacters`) and emulator (no stall
+  in the runs after).
+- **For the talk:** a model's output is user input. It reaches the screen,
+  and the screen has rules too.
+
+## 40. Smaller ones from the tic-tac-toe day
+
+- **A prediction, wrong again.** "Service-only changes take about 4
+  minutes." The session API is new framework API (`android.jarvis`), and the
+  first image build took 40 min 40 s (4,800 build steps; the boot classpath
+  changed). Later service-only builds took 2 to 3.5 minutes, as before.
+- **`/data` wiped by the image build.** The same build regenerated
+  `userdata.img`, so the emulator came up without its four models (as on
+  8 Oct). Reinstalled with `cmd jarvis install-model`.
+- **The test could not see the screen while Jarvis thought.** The
+  "thinking" spinner never lets the screen go idle, so `uiautomator dump`
+  fails during a turn and leaves the last file behind. The first full run
+  then read an empty board and sent `input tap` with no coordinates.
+  The test now deletes the old dump, retries, and waits on the service.
+- **`pkill -f tictactoe.sh` killed Claude's own shell**, whose command line
+  contained the same words. The same trap as `pkill -f qemu` on 5 Oct.
+- **Editing a test while it ran.** Bash reads a script as it goes; a
+  change made to `tictactoe.sh` during run 4 ended it with "syntax error
+  near unexpected token" in the middle of game 2. The script was fine.
+- **A real alarm.** In run 5 the test's first tap missed the "Play with
+  Jarvis" button (the screen was not readable in the first minute after
+  boot), so no session was open, and the fence check
+  `cmd jarvis tool set_alarm '{"hour":7,"minute":0}'` was not refused: it
+  set a real 07:00 alarm on the emulator ("Alarm set for 07:00 — Jarvis
+  Alarm"). The fence did its job (no session, so no fence); the test was
+  wrong to call a tool with side effects without checking first. It now
+  stops before those calls if no session is open, and waits up to 30 s for
+  the button.
+- **A wrong unit test.** `BoardTest` expected "wins now" for cell 2 of
+  `OO.XX.X..`; the code said "wins now, blocks the player", which is right:
+  cell 2 also stops X's 2-4-6 diagonal.
+- **Jarvis went quiet** once only calls were allowed (entry 37). The turn
+  now ends with one short call that may only `say`, when the model has not
+  said anything. With the prompt cached it costs a few seconds, after the
+  move is already on the board.
+

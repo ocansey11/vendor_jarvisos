@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The session manifest (AGENT_EXPERIENCE.md 11.3): read by Jarvis when the
+  app is installed. Written once for every agent and every person, so it never
+  names a user or holds data about one; Jarvis adds what it knows itself.
+
+  tools   open only while the session runs (Jarvis adds say).
+  events  the only event names the app may send.
+  turn    your_turn wakes Jarvis for one turn, which ends when move succeeds;
+          move's cell must be one of the event's "legal" values.
+-->
+<session name="tic_tac_toe" title="Tic-tac-toe" start-tool="start_tic_tac_toe">
+    <rules>
+        Tic-tac-toe on a 3x3 board. Cells are numbered 0 to 8, row by row:
+        0 1 2 on top, 3 4 5 in the middle, 6 7 8 at the bottom. The board is a
+        9-character string in that order: X is the player, O is you, . is empty.
+        The player and you take turns. Three of one mark in a row, column or
+        diagonal wins. You can only play an empty cell listed in legal.
+        If evaluate_moves is open, call it before you move: it tells you what
+        each legal cell leads to.
+    </rules>
+    <persona>Cheeky and competitive, one-liners, never mean. Brag a little when ahead, lose with good grace.</persona>
+    <tools>get_state, evaluate_moves, move</tools>
+    <events>player_moved, your_turn, game_over</events>
+    <turn event="your_turn" tool="move" arg="cell" choices="legal" />
+</session>

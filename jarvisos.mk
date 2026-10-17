@@ -52,10 +52,19 @@ endif
 PRODUCT_PACKAGES += \
     Jarvis
 
+# ---------------------------------------------------------------------------
+# Tic-tac-toe against Jarvis (apps/JarvisTicTacToe): the sample app for
+# sessions, AGENT_EXPERIENCE.md section 11. In /system because it uses @hide API.
+# ---------------------------------------------------------------------------
+
+PRODUCT_PACKAGES += \
+    JarvisTicTacToe
+
 # Products that enforce a generic /system (the emulator and Cuttlefish
 # targets) need the JarvisOS additions listed explicitly.
 PRODUCT_ARTIFACT_PATH_REQUIREMENT_ALLOWED_LIST += \
     system/app/Jarvis/% \
+    system/app/JarvisTicTacToe/% \
     system/etc/jarvisos/tools/% \
     system/lib64/libcactus.so \
     system/lib64/libllama_jarvis.so \

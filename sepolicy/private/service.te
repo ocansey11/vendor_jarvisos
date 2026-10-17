@@ -5,3 +5,9 @@
 # yet, so opening this to third-party apps would expose RAG over the user's files.
 type jarvis_service, system_api_service, system_server_service, service_manager_type;
 type jarvis_tools_service, system_api_service, system_server_service, service_manager_type;
+
+# Sessions (AGENT_EXPERIENCE.md section 11): any app may look this one up, as
+# any app may declare a session. It carries no user data: the service checks
+# that the caller owns the session it names and is on screen, and the session
+# only lets Jarvis call that app's own declared tools.
+type jarvis_session_service, app_api_service, system_server_service, service_manager_type;

@@ -1,0 +1,16 @@
+// Tic-tac-toe against Jarvis: the sample app for Agent Experience (AX),
+// vendor/jarvisos/AGENT_EXPERIENCE.md section 11. Part of the ROM
+// (PRODUCT_PACKAGES in jarvisos.mk).
+//
+// Built against the platform because android.jarvis.JarvisSession is @hide,
+// and installed in /system because only a system app may use @hide API.
+// Not signed with the platform key: sessions need no permission, so it runs
+// as an ordinary app (untrusted_app), as a third-party game would.
+// To update it on a running emulator without a full image build:
+//   m JarvisTicTacToe && adb install -r $ANDROID_PRODUCT_OUT/system/app/JarvisTicTacToe/JarvisTicTacToe.apk
+android_app {
+    name: "JarvisTicTacToe",
+    srcs: ["src/**/*.java"],
+    resource_dirs: ["res"],
+    platform_apis: true,
+}

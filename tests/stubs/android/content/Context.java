@@ -4,6 +4,8 @@ package android.content;
 public abstract class Context {
     public abstract void sendBroadcast(Intent intent);
     public void sendBroadcastAsUser(Intent intent, android.os.UserHandle user) {}
+    public void sendBroadcastAsUser(Intent intent, android.os.UserHandle user,
+            String receiverPermission, android.os.Bundle options) {}
     public abstract Object getSystemService(String name);
     public <T> T getSystemService(Class<T> serviceClass) { return null; }
 }
