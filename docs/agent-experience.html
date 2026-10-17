@@ -1,4 +1,4 @@
-<title>Jarvis Morphing Surface</title>
+<title>Jarvis Agent Experience</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600&display=swap">
 <style>
 /* Layout: one reading column; the five phone mock-ups break out as a wrapping row. */
@@ -107,15 +107,21 @@ footer { font-size: 14px; color: var(--muted); display: flex; flex-direction: co
 <div class="page">
 
 <header>
-  <div class="eyebrow">JarvisOS · plan for discussion · 8 October 2026</div>
-  <h1>A surface that changes shape</h1>
-  <p class="lede">Today Jarvis gives each reply as one line of text. This plan gives the reply a shape that fits its content. The app makes the view. Jarvis shows the view. The model only selects the tool.</p>
-  <p class="status"><strong>Status: nothing in this plan is built.</strong> The pictures are drawings, not screenshots. The speed figures come from the emulator on 8 October 2026, with speech from files and not from a microphone. The text obeys the rules of ASD-STE100 (Simplified Technical English). It was not checked with an STE checker.</p>
+  <div class="eyebrow">JarvisOS · plan for discussion · 8 and 17 October 2026</div>
+  <h1>Agent Experience (AX)</h1>
+  <p class="lede">An app on JarvisOS has two users: the person and Jarvis. UX is how an app works with the person. AX is how an app works with Jarvis. AX has three parts: tools, views and sessions.</p>
+  <div class="scroll"><table>
+    <tr><th>Part</th><th>Direction</th><th>What it is</th><th>Status</th></tr>
+    <tr><td>Tools</td><td>App to Jarvis</td><td>Actions that Jarvis can do in the app.</td><td>Built (tool registry)</td></tr>
+    <tr><td>Views</td><td>Jarvis to person</td><td>The shape of a reply: a surface that changes shape.</td><td>Sections 1 to 8</td></tr>
+    <tr><td>Sessions</td><td>App and Jarvis, live</td><td>Jarvis takes part in the app while it runs. Example: a game with turns.</td><td>Section 9</td></tr>
+  </table></div>
+  <p class="status"><strong>Status: nothing in this plan is built, except the tools.</strong> The pictures are drawings, not screenshots. The speed figures come from the emulator on 8 October 2026, with speech from files and not from a microphone. The text obeys the rules of ASD-STE100 (Simplified Technical English). It was not checked with an STE checker.</p>
 </header>
 
 <section>
   <h2>The decision for the team</h2>
-  <p>The team must make one decision: who makes the view. Section 3 gives four options and one recommendation. The other sections give the terms, the contract, the safety rules and the work.</p>
+  <p>For views, the team must make one decision: who makes the view. Section 3 gives four options and one recommendation. The other sections give the terms, the contract, the safety rules and the work.</p>
 </section>
 
 <section>
@@ -322,8 +328,103 @@ flowchart LR
   </ol>
 </section>
 
+<section>
+  <h2>9. Sessions: Jarvis inside a running app</h2>
+  <p>Added 17 October 2026. A session is a period in which Jarvis takes part in one app. The first sample is a game: Kevin plays tic-tac-toe against Jarvis.</p>
+  <div class="scroll"><table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Session</td><td>A period in which Jarvis takes part in one app. It has a start and an end.</td></tr>
+    <tr><td>Session manifest</td><td>The file in the app package that describes the session. Jarvis reads it at install time.</td></tr>
+    <tr><td>Event</td><td>Data that the app sends during a session. Example: <code>your_turn</code>. An event is not a prompt.</td></tr>
+    <tr><td>Session tools</td><td>Tools that are open only during the session.</td></tr>
+    <tr><td>Start tool</td><td>A tool that opens the app and starts a session. Jarvis uses it to find the app.</td></tr>
+  </table></div>
+  <div class="pair">
+    <div><span class="cap">Static: the session manifest, from the developer</span>
+<pre>&lt;session name="tic_tac_toe"
+         title="Tic-tac-toe"
+         start-tool="start_tic_tac_toe"&gt;
+  &lt;rules&gt;Players take turns on cells
+    0-8. Three in a row wins.
+    Cell 4 is lava.&lt;/rules&gt;
+  &lt;persona&gt;Cheeky, competitive,
+    one-liners. Never mean.&lt;/persona&gt;
+  &lt;tools&gt;get_state, evaluate_moves,
+    move&lt;/tools&gt;
+  &lt;events&gt;player_moved, your_turn,
+    player_said, game_over&lt;/events&gt;
+&lt;/session&gt;</pre></div>
+    <div><span class="cap">Live: events, from the app while it runs</span>
+<pre>s = jarvis.startSession("tic_tac_toe");
+s.event("player_moved",
+  {"cell":0, "board":"X........"});
+s.event("your_turn",
+  {"board":"X........",
+   "legal":[1,2,3,5,6,7,8]});
+s.end("game_over",
+  {"winner":"kevin"});</pre></div>
+  </div>
+  <h3>The developer writes for any agent and any person</h3>
+  <p>The session manifest goes to all users. It does not name a user and does not contain data about a user. Jarvis adds the facts about the person from its own memory, on the device. The app never gets these facts.</p>
+  <div class="scroll"><table>
+    <tr><th>Part of the prompt</th><th>Source</th><th>Same for all users?</th></tr>
+    <tr><td>Rules and persona</td><td>Session manifest (developer)</td><td>Yes</td></tr>
+    <tr><td>Facts about the person</td><td>Jarvis memory</td><td>No</td></tr>
+    <tr><td>The event</td><td>The app, now</td><td>No</td></tr>
+    <tr><td>The open tools</td><td>Tool registry</td><td>Yes</td></tr>
+    <tr><td>Recent events</td><td>The session, last few only</td><td>No</td></tr>
+  </table></div>
+  <h3>Why the app sends events and not prompts</h3>
+  <ol>
+    <li>Jarvis owns its prompt. The app does not need to know the model. A change of model does not break the app.</li>
+    <li>The manifest is fixed at install time and can be examined. An event can change at any time.</li>
+    <li>An app that sends prompts can try to control Jarvis.</li>
+  </ol>
+  <p class="status"><strong>Limit:</strong> text in the rules and in events such as <code>player_said</code> still goes to the model, and a small model can obey it. The primary protection is the tool fence: during a session Jarvis can use only the session tools and <code>say</code>. The worst result is then a bad move in the game.</p>
+  <h3>Two ways to start</h3>
+  <div class="scroll"><table>
+    <tr><th>Start</th><th>Sequence</th></tr>
+    <tr><td>From the app</td><td>The person touches "Play with Jarvis". The app calls <code>startSession</code>. The button stands in for the wake word until wake word detection exists.</td></tr>
+    <tr><td>From Jarvis</td><td>"Hey Jarvis, let's play tic-tac-toe." Jarvis finds the start tool in the registry and opens the app. The app calls <code>startSession</code> when it is ready.</td></tr>
+  </table></div>
+  <h3>More than one match: Jarvis asks</h3>
+  <p>If two apps match one request, Jarvis does not select one. Jarvis asks the person. This is a general rule: it also applies when Needle returns two tools with near confidence, and when a request does not give a necessary argument. The Chips and Sheet shapes (section 2) show the question. The exact rule is not designed yet.</p>
+  <h3>A turn</h3>
+  <pre class="mermaid">
+sequenceDiagram
+  participant K as Kevin
+  participant G as Game app
+  participant J as Jarvis service
+  K->>G: plays cell 0
+  G->>J: event your_turn (board, legal moves)
+  J->>G: get_state / evaluate_moves
+  G-->>J: structured result
+  J->>G: move(5)
+  J->>G: say("Corners again, Kevin?")
+  G->>K: board and message
+  </pre>
+  <ol>
+    <li>The event wakes Jarvis. Jarvis does one turn and stops. It does not wait in a loop.</li>
+    <li>Needle does not process turns. The chat model does the turn.</li>
+    <li>The tools do the calculation. The model decides, and can use facts about the person.</li>
+    <li>llama.cpp can limit the output to a grammar, so that only a legal <code>move</code> is possible. Not checked: does our JNI layer pass a grammar?</li>
+    <li>After a wrong tool, Jarvis retries one or two times. Then the app makes a random legal move.</li>
+    <li>A turn takes approximately 20 seconds with Qwen3-1.7B on the emulator. The app shows "Jarvis is thinking".</li>
+  </ol>
+  <p>Experiment for the talk: play with <code>evaluate_moves</code> off, then on. Same model, same game. This shows how much of the result comes from the tools.</p>
+  <h3>Open questions</h3>
+  <ol>
+    <li>Is the session manifest XML, like the tool declarations, or JSON, like the views?</li>
+    <li>How near must two confidences be before Jarvis asks?</li>
+    <li>Can Jarvis start a session in an app with no "Play with Jarvis" button?</li>
+    <li>Can two sessions be open at the same time?</li>
+    <li>What does Jarvis do when the person talks about something else during a session?</li>
+    <li>Where does AX go in the sequence of section 7? Not decided.</li>
+  </ol>
+</section>
+
 <footer>
-  <span>Source in the repository: <code>vendor/jarvisos/MORPHING_UI.md</code>. Measurements: <code>tests/emulator/voice.sh</code>, 8 October 2026, emulator only.</span>
+  <span>Source in the repository: <code>vendor/jarvisos/AGENT_EXPERIENCE.md</code>. Measurements: <code>tests/emulator/voice.sh</code>, 8 October 2026, emulator only.</span>
   <span>Written with Claude for Kevin Ocansey and the JarvisOS team.</span>
 </footer>
 

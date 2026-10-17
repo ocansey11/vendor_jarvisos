@@ -1,13 +1,14 @@
-# MORPHING_UI.md — A surface that changes shape
+# AGENT_EXPERIENCE.md — Agent Experience (AX)
 
-> Plan for discussion. Nothing in this document is built.
-> Written 8 October 2026 to the rules of ASD-STE100 (Simplified Technical
-> English): short sentences, active voice, one meaning for each term. It was
-> not checked with an STE checker.
-> The page for the team, with pictures: `docs/morphing-ui.html`.
-> Section 11 (Agent Experience, AX) was added on 17 October 2026. The morphing
-> surface in sections 1 to 10 is one part of AX. `docs/morphing-ui.html` does
-> not show section 11 yet.
+> Plan for discussion. Nothing in this document is built, except the tools.
+> Written 8 October 2026 (as MORPHING_UI.md) and 17 October 2026, to the rules
+> of ASD-STE100 (Simplified Technical English): short sentences, active voice,
+> one meaning for each term. It was not checked with an STE checker.
+> The page for the team, with pictures: `docs/agent-experience.html`.
+
+An app on JarvisOS has two users: the person and Jarvis. AX is how an app
+works with Jarvis. AX has three parts (section 11.1): tools (built), views
+(sections 1 to 10, "a surface that changes shape") and sessions (section 11).
 
 ## 1. Purpose
 
