@@ -1004,3 +1004,30 @@ notes; entries 7 onward were written as they happened.
   path (the Jarvis app) is not affected.
 - **For the talk:** a score of 12/12 hid one wrong argument and three
   failures of our own. Score what happened, not what was called.
+
+## 35. "How are you doing today" read the notifications
+
+- **When:** 17 Oct 2026, 15:15, Kevin chatting to Jarvis in the app on the
+  emulator (scrcpy), minutes after the Needle dry run of roadblock 34's
+  12 requests had shown no wrong guess above the bar.
+- **Expected:** small talk scores low with Needle and goes to the chat model.
+  In the dry run, the two general questions scored 0.50 and 0.52.
+- **What happened:** from the log:
+
+  ```
+  processQuery: how are you doing today
+  FastPath: decided in 576 ms, confidence 0.8043: get_notifications {}
+  SystemToolExecutor: Executing @system/get_notifications
+  processQuery: notifications ?
+  FastPath: decided in 583 ms, confidence 0.7759: get_notifications {}
+  ```
+
+  Needle was sure enough to pass the bar (75, `FastPath.java:22`), so the
+  tool ran and the chat model never saw the message.
+- **Cause:** Needle always names a tool. Its confidence is a score of that
+  guess, not of "this is a command". Twelve dry-run requests were too few to
+  set the bar.
+- **Fix:** not made yet.
+- **Proven to:** seen in the app by a human, first try.
+- **For the talk:** the test said "safe"; the first real user said
+  "how are you" and Jarvis read their notifications.
