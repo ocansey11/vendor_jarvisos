@@ -19,6 +19,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -64,6 +65,8 @@ class ToolsScreen {
     private boolean mFollowing;
     /** Test mode: tool name to its current state; empty otherwise. */
     private Map<String, String> mStates = Collections.emptyMap();
+    /** Test mode: the service's session record (declared, open, last), or null. */
+    private JSONObject mSessions;
 
     ToolsScreen(MainActivity activity) {
         mActivity = activity;
@@ -116,6 +119,150 @@ class ToolsScreen {
         if (states.equals(mStates)) return;
         mStates = states;
         mAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Test mode: the sessions part of getStatus. Read-only: what each app's
+     * session gave Jarvis and what Jarvis did, also after the session ended.
+     */
+    void showSessions(JSONObject sessions) {
+        if (!mTestMode) return;
+        String before = mSessions != null ? mSessions.toString() : "";
+        mSessions = sessions;
+        if (!before.equals(sessions != null ? sessions.toString() : "")) {
+            mAdapter.notifyDataSetChanged();
+        }
+    }
+
+    /** The declared session of an app, or null. */
+    private JSONObject declared(String packageName) {
+        JSONArray all = mSessions != null ? mSessions.optJSONArray("declared") : null;
+        for (int i = 0; all != null && i < all.length(); i++) {
+            JSONObject d = all.optJSONObject(i);
+            if (d != null && packageName.equals(d.optString("app"))) return d;
+        }
+        return null;
+    }
+
+    /** The app's open session, else its last ended one, else null. */
+    private JSONObject latest(String packageName) {
+        if (mSessions == null) return null;
+        for (String key : new String[] {"open", "last"}) {
+            JSONObject s = mSessions.optJSONObject(key);
+            if (s != null && packageName.equals(s.optString("app"))) return s;
+        }
+        return null;
+    }
+
+    /** The data of the session's newest event that carries a board or values. */
+    private static JSONObject lastData(JSONObject session) {
+        JSONArray events = session != null ? session.optJSONArray("events") : null;
+        for (int i = events != null ? events.length() - 1 : -1; i >= 0; i--) {
+            JSONObject data = events.optJSONObject(i).optJSONObject("data");
+            if (data != null && data.length() > 0) return data;
+        }
+        return null;
+    }
+
+    /** Three lines under the app's name: the session, the last state, Jarvis's last turn. */
+    private String sessionSummary(String packageName) {
+        JSONObject session = latest(packageName);
+        if (session == null) return mActivity.getString(R.string.session_none);
+        StringBuilder text = new StringBuilder();
+        long seconds = session.optLong("seconds");
+        if (session.has("ended")) {
+            text.append(mActivity.getString(R.string.session_last, session.optInt("turns"),
+                    seconds / 60, seconds % 60, session.optString("ended")));
+        } else {
+            text.append(mActivity.getString(session.optBoolean("inTurn")
+                    ? R.string.session_open_thinking : R.string.session_open,
+                    session.optInt("turns")));
+        }
+        JSONObject data = lastData(session);
+        if (data != null && data.has("board")) {
+            text.append('\n').append(mActivity.getString(R.string.session_board,
+                    data.optString("board"), data.optString("turn", "?")));
+        }
+        JSONArray turns = session.optJSONArray("turnTraces");
+        if (turns != null && turns.length() > 0) {
+            text.append('\n').append(mActivity.getString(R.string.session_last_turn,
+                    describeTurn(turns.optJSONObject(turns.length() - 1))));
+        }
+        return text.toString();
+    }
+
+    /** "evaluate_moves → move(cell=4) · “Corners again?” · 17 s" from a turn trace. */
+    private static String describeTurn(JSONObject trace) {
+        StringBuilder text = new StringBuilder();
+        String said = null;
+        JSONArray steps = trace.optJSONArray("steps");
+        for (int i = 0; steps != null && i < steps.length(); i++) {
+            JSONObject step = steps.optJSONObject(i);
+            JSONArray calls = step.optJSONArray("calls");
+            for (int j = 0; calls != null && j < calls.length(); j++) {
+                JSONObject call = calls.optJSONObject(j);
+                if (text.length() > 0) text.append(" → ");
+                text.append(call.optString("name"));
+                JSONObject args = call.optJSONObject("args");
+                if (args != null && args.length() > 0) {
+                    StringBuilder list = new StringBuilder();
+                    for (java.util.Iterator<String> k = args.keys(); k.hasNext(); ) {
+                        String key = k.next();
+                        if (list.length() > 0) list.append(", ");
+                        list.append(key).append('=').append(args.opt(key));
+                    }
+                    text.append('(').append(list).append(')');
+                }
+            }
+            if (step.has("said_text")) {
+                said = step.optString("said_text").replaceFirst("^Said to the user: ", "");
+            }
+        }
+        if (said != null) text.append(" · “").append(said).append('”');
+        text.append(" · ").append(trace.optLong("ms") / 1000).append(" s");
+        return text.toString();
+    }
+
+    /** Test mode, a tool of an app with a session: open or closed now, and its values. */
+    private String sessionToolState(Tool tool) {
+        JSONObject declared = declared(tool.packageName);
+        if (declared == null) return null;
+        if (tool.name.equals(declared.optString("startTool"))) {
+            return mActivity.getString(R.string.session_tool_start);
+        }
+        JSONArray tools = declared.optJSONArray("tools");
+        boolean sessionTool = false;
+        for (int i = 0; tools != null && i < tools.length(); i++) {
+            if (tool.name.equals(tools.optString(i))) sessionTool = true;
+        }
+        if (!sessionTool) return null;
+        JSONObject open = mSessions.optJSONObject("open");
+        String state;
+        if (open == null || !tool.packageName.equals(open.optString("app"))) {
+            state = mActivity.getString(R.string.session_tool_closed);
+        } else {
+            JSONArray openTools = open.optJSONArray("openTools");
+            boolean on = false;
+            for (int i = 0; openTools != null && i < openTools.length(); i++) {
+                if (tool.name.equals(openTools.optString(i))) on = true;
+            }
+            state = mActivity.getString(on ? R.string.session_tool_open : R.string.session_tool_off);
+        }
+        // The value the turn tool takes, limited to what the game allows now.
+        JSONObject turn = declared.optJSONObject("turn");
+        if (turn != null && tool.name.equals(turn.optString("tool"))) {
+            JSONObject data = lastData(latest(tool.packageName));
+            JSONArray choices = data != null ? data.optJSONArray(turn.optString("choices")) : null;
+            if (choices != null) {
+                StringBuilder values = new StringBuilder();
+                for (int i = 0; i < choices.length(); i++) {
+                    if (i > 0) values.append(' ');
+                    values.append(choices.opt(i));
+                }
+                state += "\n" + turn.optString("arg") + ": " + values;
+            }
+        }
+        return state;
     }
 
     /** Runs the RESET calls one after another through the service, as the Run button does. */
@@ -309,8 +456,12 @@ class ToolsScreen {
             List<Tool> tools = mApps.get(app);
             Tool first = tools.get(0);
             ((TextView) view.findViewById(R.id.title)).setText(first.appLabel);
-            ((TextView) view.findViewById(R.id.subtitle)).setText(first.builtIn
-                    ? mActivity.getString(R.string.tools_builtin) : first.packageName);
+            TextView subtitle = view.findViewById(R.id.subtitle);
+            boolean session = mTestMode && !first.builtIn && declared(first.packageName) != null;
+            subtitle.setSingleLine(!session);
+            subtitle.setMaxLines(session ? 4 : 1);
+            subtitle.setText(first.builtIn ? mActivity.getString(R.string.tools_builtin)
+                    : session ? sessionSummary(first.packageName) : first.packageName);
             ((TextView) view.findViewById(R.id.count)).setText(mActivity.getResources()
                     .getQuantityString(R.plurals.tools_count, tools.size(), tools.size()));
             ImageView icon = view.findViewById(R.id.icon);
@@ -333,7 +484,8 @@ class ToolsScreen {
             ((TextView) view.findViewById(R.id.title)).setText(t.name);
             ((TextView) view.findViewById(R.id.subtitle)).setText(t.description);
             TextView state = view.findViewById(R.id.state);
-            String value = t.builtIn ? mStates.get(t.name) : null;
+            String value = t.builtIn ? mStates.get(t.name)
+                    : mTestMode && mSessions != null ? sessionToolState(t) : null;
             state.setText(value);
             state.setVisibility(value != null ? View.VISIBLE : View.GONE);
             return view;

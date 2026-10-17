@@ -186,6 +186,7 @@ public class MainActivity extends Activity {
     private void showStatus(String json) {
         try {
             JSONObject status = new JSONObject(json);
+            mTools.showSessions(status.optJSONObject("sessions"));
             boolean model = status.getJSONObject("models").optBoolean("primary");
             mChat.setModelReady(model);
             if (!status.optBoolean("ready")) {
