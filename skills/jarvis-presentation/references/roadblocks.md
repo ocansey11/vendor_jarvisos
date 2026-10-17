@@ -968,3 +968,39 @@ notes; entries 7 onward were written as they happened.
   never been loaded: no arm64 device. The full Pong ROM has not been rebuilt.
 - **For the talk:** the "hack" for the emulator took two tries; the
   "supported" platform took four.
+
+## 34. "Right tool" was not "it worked": the shell ran tools as the shell
+
+- **When:** 17 Oct 2026, comparing Qwen3-1.7B and Gemma 4 E2B on the
+  emulator with `tests/emulator/compare-models.sh` (12 requests each, fast
+  path off).
+- **Expected:** the first version of the script scored only the tool name.
+  Qwen got 12 of 12.
+- **What happened:** the replies did not match the score. "Turn off do not
+  disturb" answered "DND has been set to total silence", and alarm,
+  brightness and open-app answered with errors. Recording the arguments and
+  the tool's own result showed two separate faults:
+  1. Model: Qwen called `set_dnd {"mode":"total_silence"}` for "turn off".
+     Gemma called `{"mode":"off"}`, which is correct.
+  2. Ours: three tools returned
+     `Permission Denial: package=android does not belong to uid=2000`
+     with both models. uid 2000 is the shell.
+- **Cause of 2:** the Binder entry points clear the caller's identity before
+  tools run; the `cmd jarvis` shell commands do not, so tools ran as the
+  shell, which may not act as the system package.
+
+  ```java
+  // processQuery (Binder): tools run as the system
+  final long token = Binder.clearCallingIdentity();
+  try { return runQuery(query); } finally { Binder.restoreCallingIdentity(token); }
+
+  // onCommand "query" (shell): tools run as uid 2000
+  pw.println(runQuery(getNextArgRequired()));
+  ```
+
+- **Fix:** not made yet. Clear the identity in the shell `query`, `tool`
+  and `voice` commands as the Binder methods do.
+- **Proven to:** cause seen in the tool results; fix untested. The Binder
+  path (the Jarvis app) is not affected.
+- **For the talk:** a score of 12/12 hid one wrong argument and three
+  failures of our own. Score what happened, not what was called.
