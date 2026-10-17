@@ -29,7 +29,7 @@ class BoardTest {
     void takenCell() {
         Board board = Board.of("X...O....");
         IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> board.play(4, Board.PLAYER));
+                () -> board.play(4, Board.X));
         assertTrue(e.getMessage().contains("legal cells: [1, 2, 3, 5, 6, 7, 8]"), e.getMessage());
     }
 
@@ -37,7 +37,7 @@ class BoardTest {
     @DisplayName("evaluate_moves: an immediate win, a block, and losing moves")
     void winAndBlock() {
         // O O . / X X . / X . .  — Jarvis (O) to move. 2 wins; 5 would only block.
-        Map<Integer, String> e = Board.of("OO.XX.X..").evaluate(Board.JARVIS);
+        Map<Integer, String> e = Board.of("OO.XX.X..").evaluate(Board.O);
         // 2 also stops X on the 2-4-6 diagonal.
         assertEquals("wins now, blocks the player", e.get(2));
         assertTrue(e.get(5).contains("blocks the player"), e.get(5));
@@ -47,7 +47,7 @@ class BoardTest {
     @Test
     @DisplayName("evaluate_moves: after X in a corner, only the centre draws")
     void cornerOpening() {
-        Map<Integer, String> e = Board.of("X........").evaluate(Board.JARVIS);
+        Map<Integer, String> e = Board.of("X........").evaluate(Board.O);
         assertEquals("draw", e.get(4));
         for (int cell : List.of(1, 2, 3, 5, 6, 7, 8)) {
             assertTrue(e.get(cell).startsWith("loses"), cell + ": " + e.get(cell));
@@ -58,10 +58,10 @@ class BoardTest {
     @DisplayName("evaluate_moves: a win on the board, and the edge that saves a draw")
     void diagonalPositions() {
         // O X . / . O . / X . .  : O to move; 8 wins now.
-        Map<Integer, String> e = Board.of("OX..O.X..").evaluate(Board.JARVIS);
+        Map<Integer, String> e = Board.of("OX..O.X..").evaluate(Board.O);
         assertEquals("wins now", e.get(8));
         // X . . / . O . / . . X : O to move; an edge forces a draw, a corner loses.
-        Map<Integer, String> f = Board.of("X...O...X").evaluate(Board.JARVIS);
+        Map<Integer, String> f = Board.of("X...O...X").evaluate(Board.O);
         assertEquals("draw", f.get(1));
         assertTrue(f.get(2).startsWith("loses"), f.get(2));
     }
@@ -69,9 +69,9 @@ class BoardTest {
     @Test
     @DisplayName("best: a win beats a block; after a corner opening only the centre")
     void best() {
-        assertEquals(List.of(2), Board.of("OO.XX.X..").best(Board.JARVIS));
-        assertEquals(List.of(4), Board.of("X........").best(Board.JARVIS));
+        assertEquals(List.of(2), Board.of("OO.XX.X..").best(Board.O));
+        assertEquals(List.of(4), Board.of("X........").best(Board.O));
         // Facing a fork threat, every drawing cell is listed.
-        assertEquals(List.of(1, 3, 5, 7), Board.of("X...O...X").best(Board.JARVIS));
+        assertEquals(List.of(1, 3, 5, 7), Board.of("X...O...X").best(Board.O));
     }
 }

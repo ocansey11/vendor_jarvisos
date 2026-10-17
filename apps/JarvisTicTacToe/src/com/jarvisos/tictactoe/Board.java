@@ -6,16 +6,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A tic-tac-toe board: cells 0 to 8, row by row. The player is X, Jarvis is O.
+ * A tic-tac-toe board: cells 0 to 8, row by row, marks X and O. X moves first.
  *
  * Plain Java with no Android in it, so the rules and the move evaluation are
  * tested on the host (vendor/jarvisos/tests, BoardTest).
  */
 public final class Board {
 
-    public static final char PLAYER = 'X';
-    public static final char JARVIS = 'O';
+    public static final char X = 'X';
+    public static final char O = 'O';
     public static final char EMPTY = '.';
+
+    /** The other side's mark. */
+    public static char other(char mark) {
+        return mark == X ? O : X;
+    }
 
     private static final int[][] LINES = {
         {0, 1, 2}, {3, 4, 5}, {6, 7, 8},   // rows
@@ -101,10 +106,11 @@ public final class Board {
      * sides after it, in words a small model can use without searching:
      * "wins now", "wins in 2 moves", "draw", "loses: player wins in 1 move",
      * plus ", blocks the player" when the cell stops the other side's three
-     * in a row. Cells in order.
+     * in a row. Cells in order. "Player" is always the other side: the
+     * caller evaluates for Jarvis.
      */
     public Map<Integer, String> evaluate(char mark) {
-        final char other = mark == PLAYER ? JARVIS : PLAYER;
+        final char other = other(mark);
         Map<Integer, String> result = new LinkedHashMap<>();
         for (int cell : legal()) {
             Board next = copy();
@@ -121,7 +127,7 @@ public final class Board {
                     outcome = "wins in " + (plies + 1) / 2 + " moves";
                 } else if (value < 0) {
                     int theirs = plies / 2;
-                    outcome = "loses: " + (other == PLAYER ? "player" : "Jarvis") + " wins in "
+                    outcome = "loses: player wins in "
                             + theirs + (theirs == 1 ? " move" : " moves");
                 } else {
                     outcome = "draw";
@@ -129,8 +135,7 @@ public final class Board {
             }
             Board threat = copy();
             threat.mCells[cell] = other;
-            if (threat.winner() == other) outcome += ", blocks the "
-                    + (other == PLAYER ? "player" : "Jarvis");
+            if (threat.winner() == other) outcome += ", blocks the player";
             result.put(cell, outcome);
         }
         return result;
@@ -143,7 +148,7 @@ public final class Board {
      * cell the table said loses, so the tool also says which cells are best.
      */
     public List<Integer> best(char mark) {
-        final char other = mark == PLAYER ? JARVIS : PLAYER;
+        final char other = other(mark);
         List<Integer> best = new ArrayList<>();
         int bestScore = Integer.MIN_VALUE;
         for (int cell : legal()) {
@@ -174,7 +179,7 @@ public final class Board {
      * as possible. Small enough to search whole: at most 9! positions.
      */
     int[] solve(char toMove) {
-        final char other = toMove == PLAYER ? JARVIS : PLAYER;
+        final char other = other(toMove);
         if (winner() == other) return new int[] {-1, 0};
         List<Integer> moves = legal();
         if (moves.isEmpty()) return new int[] {0, 0};

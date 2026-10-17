@@ -13,8 +13,9 @@
     <rules>
         Tic-tac-toe on a 3x3 board. Cells are numbered 0 to 8, row by row:
         0 1 2 on top, 3 4 5 in the middle, 6 7 8 at the bottom. The board is a
-        9-character string in that order: X is the player, O is you, . is empty.
-        The player and you take turns. Three of one mark in a row, column or
+        9-character string in that order, . for empty. X moves first. The state
+        says which mark is yours ("you") and which is the player's ("player");
+        it can be either. The player and you take turns. Three of one mark in a row, column or
         diagonal wins. You can only play an empty cell listed in legal.
         If evaluate_moves is open, call it before you move: it tells you what
         each legal cell leads to.

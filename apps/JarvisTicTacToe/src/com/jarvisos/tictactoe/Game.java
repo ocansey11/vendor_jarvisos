@@ -19,9 +19,10 @@ import java.util.Random;
  * The game, and its side of the Jarvis session. One per process: the screen
  * (GameActivity) and the tool receivers (Jarvis's moves) both use it.
  *
- * It is an ordinary game first: two people take turns on one phone. Jarvis
- * plays O only when invited, by "Play with Jarvis" or by asking Jarvis (the
- * start tool), and the game goes on without it when it leaves.
+ * It is an ordinary game first. The person picks a mark (X moves first) and
+ * an opponent: a friend on the same phone, or Jarvis. Jarvis plays only when
+ * invited, by "Play with Jarvis" or by asking Jarvis (the start tool), and
+ * only on its own turns.
  *
  * This is the part to copy for another app. Agent Experience (AX) in three
  * steps, see vendor/jarvisos/AGENT_EXPERIENCE.md section 11:
@@ -29,9 +30,9 @@ import java.util.Random;
  * <ol>
  *   <li>Declare: res/xml/jarvis_session.xml (rules, persona, session tools,
  *       events) and the tools as receivers in AndroidManifest.xml.
- *   <li>Send events: {@link #startWithJarvis}, {@link #playerMoved}. Events
- *       carry data (the board, the legal cells), never prompt text: Jarvis
- *       writes its own prompt.
+ *   <li>Send events: {@link #play}, {@link #resume}. Events carry data (the
+ *       board, the legal cells), never prompt text: Jarvis writes its own
+ *       prompt.
  *   <li>Answer tools: MoveTool and the others call back into this class.
  * </ol>
  *
@@ -50,11 +51,8 @@ public final class Game implements JarvisSession.Listener {
         void onGameChanged();
     }
 
-    /** Whose mark goes down next. X is always the person holding the phone. */
-    public enum Turn { X, O, OVER }
-
-    /** Who plays O. */
-    public enum Opponent { FRIEND, JARVIS }
+    /** Who plays the other mark. NONE: no game yet, the start screen shows. */
+    public enum Opponent { NONE, FRIEND, JARVIS }
 
     private static Game sInstance;
 
@@ -64,8 +62,14 @@ public final class Game implements JarvisSession.Listener {
     private Screen mScreen;
 
     private Board mBoard = new Board();
-    private Turn mTurn = Turn.X;
-    private Opponent mOpponent = Opponent.FRIEND;
+    private Opponent mOpponent = Opponent.NONE;
+    /** The mark of the person holding the phone, chosen on the start screen. */
+    private char mMine = Board.X;
+    /** The mark that goes down next. */
+    private char mNext = Board.X;
+    private boolean mPaused;
+    /** Results since the opponent was chosen: wins for the person's side, the other side, draws. */
+    private int mWins, mLosses, mDraws;
     private int mPlayerLastMove = -1;
     private JarvisSession mSession;
     /** Listens to mSession only; callbacks from an older session are dropped. */
@@ -73,14 +77,14 @@ public final class Game implements JarvisSession.Listener {
     /** Jarvis's last line (say), shown in the speech bubble. */
     private String mBubble;
     /** One line about what happened, for the status bar. */
-    private String mStatus = "X to move. Take turns with a friend, or touch Play with Jarvis.";
+    private String mStatus = "";
     private boolean mThinking;
     private long mThinkingSince;
     /** The switch for the talk's experiment: may Jarvis use evaluate_moves? */
     private boolean mEvaluateMovesOn = true;
 
     private final Runnable mTurnTimeout = () -> {
-        if (mTurn == Turn.O && mOpponent == Opponent.JARVIS) jarvisGaveUp("no move after " + TURN_TIMEOUT_MS / 1000 + " s");
+        if (jarvisToMove()) jarvisGaveUp("no move after " + TURN_TIMEOUT_MS / 1000 + " s");
     };
 
     public static Game get(Context context) {
@@ -97,67 +101,131 @@ public final class Game implements JarvisSession.Listener {
     }
 
     // -------------------------------------------------------------------------
-    // Starting and ending: the session follows the game
+    // Starting, pausing and ending: the session follows the game
     // -------------------------------------------------------------------------
 
-    /** "New game": the same opponent again. */
-    void newGame() {
-        if (mOpponent == Opponent.JARVIS) startWithJarvis(); else startWithFriend();
+    /** The start screen: X moves first, so this is also who starts. */
+    void chooseMark(char mark) {
+        if (mOpponent != Opponent.NONE) return;
+        mMine = mark;
+        changed();
     }
 
-    /** A new game for two people on this phone. No Jarvis. */
+    /** "New game": back to the start screen. */
+    void newGame() {
+        endSession(null);
+        mOpponent = Opponent.NONE;
+        mBoard = new Board();
+        mPaused = false;
+        mBubble = null;
+        setThinking(false);
+        changed();
+    }
+
+    /** "Play with a friend": two people take turns on this phone. No Jarvis. */
     void startWithFriend() {
         endSession(null);
+        clearScore(Opponent.FRIEND);
         reset(Opponent.FRIEND);
-        mStatus = "X to move. Take turns with a friend.";
+        mStatus = "X to move.";
         changed();
     }
 
     /**
-     * A new game against Jarvis. Called by the "Play with Jarvis" button, and
-     * when Jarvis opened the game through its start tool (start_tic_tac_toe):
-     * both are the person inviting Jarvis. The person (X) moves first.
+     * "Play with Jarvis", or Jarvis opened the game through its start tool
+     * (start_tic_tac_toe): both are the person inviting Jarvis. Jarvis plays
+     * the mark the person did not choose.
      */
     void startWithJarvis() {
         endSession(null);
+        clearScore(Opponent.JARVIS);
         reset(Opponent.JARVIS);
+        if (openSession()) {
+            mStatus = mNext == mMine ? "Your move. You are " + mMine + "."
+                    : "Jarvis is " + jarvisMark() + " and moves first.";
+            if (jarvisToMove()) askJarvis();
+        }
+        changed();
+    }
+
+    /**
+     * "Rematch" after a game: the same opponent, the marks swapped, so the
+     * start alternates (X moving first is an advantage). The score carries on.
+     */
+    void rematch() {
+        if (!mBoard.isOver()) return;
+        mMine = Board.other(mMine);
+        if (mOpponent == Opponent.JARVIS) {
+            startWithJarvis();
+        } else {
+            startWithFriend();
+        }
+    }
+
+    /** "Pause": the board stays. With Jarvis, the session ends until Resume. */
+    void pause(String why) {
+        if (mOpponent == Opponent.NONE || mPaused || mBoard.isOver()) return;
+        endSession(null);
+        mPaused = true;
+        setThinking(false);
+        mStatus = why;
+        changed();
+    }
+
+    /** "Resume": with Jarvis, a new session on the same board. */
+    void resume() {
+        if (!mPaused) return;
+        mPaused = false;
+        if (mOpponent == Opponent.JARVIS && !openSession()) {
+            changed();
+            return;
+        }
+        mStatus = mOpponent == Opponent.FRIEND ? mNext + " to move."
+                : jarvisToMove() ? "Jarvis's move." : "Your move.";
+        // AX: the new session starts from the board as it is. If it is
+        // Jarvis's turn, the turn event wakes it as usual.
+        if (jarvisToMove()) askJarvis();
+        changed();
+    }
+
+    /** The screen left the foreground. A session lives only on screen: pause. */
+    void onScreenStopped() {
+        pause("Paused: the app was left. Touch Resume to carry on.");
+    }
+
+    /** A new opponent starts a new score; a rematch keeps it. */
+    private void clearScore(Opponent opponent) {
+        if (opponent == mOpponent && mBoard.isOver()) return;
+        mWins = mLosses = mDraws = 0;
+    }
+
+    private void reset(Opponent opponent) {
+        mBoard = new Board();
+        mNext = Board.X;
+        mOpponent = opponent;
+        mPaused = false;
+        mPlayerLastMove = -1;
+        mBubble = null;
+        setThinking(false);
+    }
+
+    /** Starts the session; on failure the game waits, paused, with the reason. */
+    private boolean openSession() {
         // AX: the app may close session tools it declared, never open others.
         // This is how the evaluate_moves switch reaches Jarvis.
         String[] closed = mEvaluateMovesOn ? null : new String[] {"evaluate_moves"};
         try {
             mListener = new CurrentSession();
             mSession = JarvisSession.start(mContext, SESSION, closed, mListener);
-            mStatus = "Your move. You are X, Jarvis is O.";
+            return true;
         } catch (JarvisException e) {
             Log.w(TAG, "No session", e);
             mSession = null;
             mListener = null;
-            mOpponent = Opponent.FRIEND;
-            mStatus = "Jarvis is not available (" + e.getMessage() + "). X to move, with a friend.";
+            mPaused = true;
+            mStatus = "Jarvis is not available (" + e.getMessage() + ").";
+            return false;
         }
-        changed();
-    }
-
-    /** "Stop playing with Jarvis": the game goes on, with a friend as O. */
-    void stopPlayingWithJarvis() {
-        endSession(null);
-        friendTakesOver("You stopped playing with Jarvis.");
-    }
-
-    /** The screen left the foreground. Jarvis would end the session anyway; end it first. */
-    void onScreenStopped() {
-        if (mOpponent != Opponent.JARVIS) return;
-        endSession(null);
-        friendTakesOver("Jarvis left: the app was left.");
-    }
-
-    private void reset(Opponent opponent) {
-        mBoard = new Board();
-        mTurn = Turn.X;
-        mOpponent = opponent;
-        mPlayerLastMove = -1;
-        mBubble = null;
-        setThinking(false);
     }
 
     private void endSession(String event) {
@@ -169,52 +237,49 @@ public final class Game implements JarvisSession.Listener {
     }
 
     // -------------------------------------------------------------------------
-    // The player's moves: sent to Jarvis as events
+    // The person's moves (and the friend's): sent to Jarvis as events
     // -------------------------------------------------------------------------
 
-    /** May the person touch this cell now? */
+    /** May the person touch this cell now? Never on Jarvis's turn. */
     boolean canTap(int cell) {
+        if (mOpponent == Opponent.NONE || mPaused || mBoard.isOver()) return false;
         if (mBoard.at(cell) != Board.EMPTY) return false;
-        return mTurn == Turn.X || (mTurn == Turn.O && mOpponent == Opponent.FRIEND);
+        return mOpponent == Opponent.FRIEND || mNext == mMine;
     }
 
-    /** A touch on the board: X for the person, or O for the friend in a two-player game. */
-    void cellTapped(int cell) {
+    /** A touch on the board. */
+    void play(int cell) {
         if (!canTap(cell)) return;
-        if (mTurn == Turn.X) {
-            playerMoved(cell);
-        } else {
-            mBoard.play(cell, Board.JARVIS);
-            if (!finishIfOver()) {
-                mTurn = Turn.X;
-                mStatus = "X to move.";
-            }
+        mBoard.play(cell, mNext);
+        if (mOpponent == Opponent.FRIEND) {
+            mNext = Board.other(mNext);
+            if (!finishIfOver()) mStatus = mNext + " to move.";
             changed();
+            return;
         }
-    }
-
-    private void playerMoved(int cell) {
-        mBoard.play(cell, Board.PLAYER);
         mPlayerLastMove = cell;
         // AX: events are data. Jarvis keeps the last few for its next prompt.
         if (mSession != null) mSession.event("player_moved", json("cell", cell, "board", mBoard));
-        if (finishIfOver()) return;
-
-        mTurn = Turn.O;
-        if (mOpponent == Opponent.FRIEND) {
-            mStatus = "O to move.";
+        mNext = jarvisMark();
+        if (finishIfOver()) {
             changed();
             return;
         }
         mStatus = "Jarvis's move.";
+        askJarvis();
+        changed();
+    }
+
+    /**
+     * AX: the turn event (declared in &lt;turn&gt;) wakes Jarvis for one turn.
+     * Its "legal" list is what Jarvis limits its move to. Jarvis is asked only
+     * here, on its own turn, in a game it was invited to.
+     */
+    private void askJarvis() {
         setThinking(true);
-        // AX: the turn event (declared in <turn>) wakes Jarvis for one turn.
-        // Its "legal" list is what Jarvis limits its move to. Jarvis is only
-        // asked here, after the person's move in a game it was invited to.
         if (mSession == null || !mSession.event("your_turn", state().toString())) {
             jarvisGaveUp("Jarvis did not take the turn");
         }
-        changed();
     }
 
     // -------------------------------------------------------------------------
@@ -223,14 +288,12 @@ public final class Game implements JarvisSession.Listener {
 
     /** The move tool. Refuses anything illegal; the reply goes back to the model. */
     String jarvisMoves(int cell) {
-        if (mOpponent != Opponent.JARVIS || mTurn != Turn.O) {
-            throw new IllegalStateException("it is not your turn");
-        }
-        mBoard.play(cell, Board.JARVIS);   // throws with the legal cells if taken
+        if (!jarvisToMove()) throw new IllegalStateException("it is not your turn");
+        mBoard.play(cell, jarvisMark());   // throws with the legal cells if taken
         setThinking(false);
+        mNext = mMine;
         String reply = "You played cell " + cell + ". Board: " + mBoard;
         if (!finishIfOver()) {
-            mTurn = Turn.X;
             mStatus = "Your move.";
             reply += ". The player moves next.";
         } else {
@@ -245,9 +308,9 @@ public final class Game implements JarvisSession.Listener {
         try {
             JSONObject state = new JSONObject();
             state.put("board", mBoard.toString());
-            state.put("you", String.valueOf(Board.JARVIS));
-            state.put("player", String.valueOf(Board.PLAYER));
-            state.put("turn", mTurn == Turn.O ? "you" : mTurn == Turn.X ? "player" : "none");
+            state.put("you", String.valueOf(jarvisMark()));
+            state.put("player", String.valueOf(mMine));
+            state.put("turn", mBoard.isOver() ? "none" : mNext == mMine ? "player" : "you");
             state.put("legal", new JSONArray(mBoard.legal()));
             if (mPlayerLastMove >= 0) state.put("player_last_move", mPlayerLastMove);
             if (mBoard.isOver()) state.put("winner", winnerName());
@@ -262,11 +325,11 @@ public final class Game implements JarvisSession.Listener {
         if (!mEvaluateMovesOn) throw new IllegalStateException("evaluate_moves is switched off");
         try {
             JSONObject cells = new JSONObject();
-            for (Map.Entry<Integer, String> e : mBoard.evaluate(Board.JARVIS).entrySet()) {
+            for (Map.Entry<Integer, String> e : mBoard.evaluate(jarvisMark()).entrySet()) {
                 cells.put(String.valueOf(e.getKey()), e.getValue());
             }
             return new JSONObject()
-                    .put("best", new JSONArray(mBoard.best(Board.JARVIS)))
+                    .put("best", new JSONArray(mBoard.best(jarvisMark())))
                     .put("cells", cells);
         } catch (JSONException e) {
             throw new IllegalStateException(e);
@@ -290,7 +353,7 @@ public final class Game implements JarvisSession.Listener {
         Log.i(TAG, "Jarvis's turn ended: " + (done ? "moved" : "gave up") + " (" + detail + ")");
         // AX: when Jarvis gives up (no legal call after its retries), the app
         // decides what happens. Here: a random legal move, so play goes on.
-        if (!done && mTurn == Turn.O && mOpponent == Opponent.JARVIS) jarvisGaveUp(detail);
+        if (!done && jarvisToMove()) jarvisGaveUp(detail);
         setThinking(false);
         changed();
     }
@@ -317,26 +380,13 @@ public final class Game implements JarvisSession.Listener {
         }
     }
 
+    /** Jarvis ended the session itself (it was stopped, or failed): pause, never lose the board. */
     @Override
     public void onEnded(String reason) {
         Log.i(TAG, "Session ended: " + reason);
         mSession = null;
         mListener = null;
-        if (mOpponent == Opponent.JARVIS) friendTakesOver("Jarvis left (" + reason + ").");
-    }
-
-    /**
-     * Jarvis is out of a game that may still be running. An app must work
-     * without its agent: the board stays, and a friend plays O from here.
-     */
-    private void friendTakesOver(String why) {
-        mOpponent = Opponent.FRIEND;
-        setThinking(false);
-        if (mTurn != Turn.OVER) {
-            mStatus = why + " " + (mTurn == Turn.X ? "X" : "O")
-                    + " to move: carry on with a friend.";
-        }
-        changed();
+        pause("Jarvis left (" + reason + "). Touch Resume to bring it back.");
     }
 
     private void jarvisGaveUp(String why) {
@@ -344,7 +394,6 @@ public final class Game implements JarvisSession.Listener {
         if (legal.isEmpty()) return;
         int cell = legal.get(mRandom.nextInt(legal.size()));
         Log.i(TAG, "Random move " + cell + " for Jarvis: " + why);
-        mTurn = Turn.O;
         jarvisMoves(cell);
         mBubble = "(Jarvis got stuck, so the game played cell " + cell + " for it.)";
         changed();
@@ -354,14 +403,23 @@ public final class Game implements JarvisSession.Listener {
     // Helpers
     // -------------------------------------------------------------------------
 
+    private char jarvisMark() {
+        return Board.other(mMine);
+    }
+
+    private boolean jarvisToMove() {
+        return mOpponent == Opponent.JARVIS && !mPaused && !mBoard.isOver()
+                && mNext == jarvisMark();
+    }
+
     private boolean finishIfOver() {
         if (!mBoard.isOver()) return false;
-        mTurn = Turn.OVER;
         char winner = mBoard.winner();
+        if (winner == Board.EMPTY) mDraws++; else if (winner == mMine) mWins++; else mLosses++;
         if (mOpponent == Opponent.JARVIS) {
-            mStatus = winner == Board.PLAYER ? "You win!" : winner == Board.JARVIS ? "Jarvis wins." : "Draw.";
+            mStatus = winner == mMine ? "You win!" : winner == Board.EMPTY ? "Draw." : "Jarvis wins.";
         } else {
-            mStatus = winner == Board.PLAYER ? "X wins!" : winner == Board.JARVIS ? "O wins!" : "Draw.";
+            mStatus = winner == Board.EMPTY ? "Draw." : winner + " wins!";
         }
         setThinking(false);
         endSession("game_over");
@@ -370,7 +428,7 @@ public final class Game implements JarvisSession.Listener {
 
     private String winnerName() {
         char winner = mBoard.winner();
-        return winner == Board.PLAYER ? "player" : winner == Board.JARVIS ? "you" : "draw";
+        return winner == Board.EMPTY ? "draw" : winner == mMine ? "player" : "you";
     }
 
     private void setThinking(boolean thinking) {
@@ -403,8 +461,13 @@ public final class Game implements JarvisSession.Listener {
 
     // Read by the screen.
     Board board() { return mBoard; }
-    Turn turn() { return mTurn; }
     Opponent opponent() { return mOpponent; }
+    char mine() { return mMine; }
+    int wins() { return mWins; }
+    int losses() { return mLosses; }
+    int draws() { return mDraws; }
+    boolean paused() { return mPaused; }
+    boolean over() { return mBoard.isOver(); }
     String bubble() { return mBubble; }
     String status() { return mStatus; }
     boolean thinking() { return mThinking; }

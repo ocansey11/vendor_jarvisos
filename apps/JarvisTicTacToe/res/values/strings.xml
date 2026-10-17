@@ -2,11 +2,23 @@
 <resources>
     <string name="app_name">Tic-tac-toe</string>
     <string name="title">Tic-tac-toe</string>
-    <string name="opponent_friend">O: a friend, on this phone</string>
-    <string name="opponent_jarvis">O: Jarvis</string>
+    <string name="rules">Rules</string>
+    <string name="you_play">You play</string>
+    <string name="x_first">X moves first.</string>
+    <string name="play_jarvis">Play with Jarvis</string>
+    <string name="play_friend">Play with a friend</string>
     <string name="new_game">New game</string>
-    <string name="play">Play with Jarvis</string>
-    <string name="stop">Stop playing with Jarvis</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="rematch">Rematch</string>
+    <string name="score_jarvis">You %1$d · Jarvis %2$d · Draws %3$d</string>
+    <string name="score_friend">You %1$d · Friend %2$d · Draws %3$d</string>
+    <string name="players_jarvis">You: %1$c · Jarvis: %2$c</string>
+    <string name="players_friend">You and a friend, on this phone</string>
+    <string name="choose">Touch New game to start.</string>
     <string name="thinking">Jarvis is thinking… %1$d s</string>
-    <string name="evaluate_switch">Jarvis may use evaluate_moves (next game with Jarvis)</string>
+    <string name="evaluate_switch">Jarvis may use evaluate_moves</string>
+    <string name="ok">OK</string>
+    <!-- For people. Jarvis reads its own copy in res/xml/jarvis_session.xml. -->
+    <string name="rules_text">The board has 9 cells. Two players take turns putting their mark, X or O, in an empty cell.\n\nX always moves first. Choose X to start, or O to let the other player start.\n\nThree of your marks in a row wins: across, down or diagonally.\n\nWhen all 9 cells are full and nobody has three in a row, the game is a draw.\n\nWith Jarvis: Jarvis plays the other mark. It reads the board and the same rules, and takes about 15 to 30 seconds a move. It may talk while it plays. Pause sends Jarvis away; Resume brings it back to the same board.\n\nRematch plays the same opponent again with the marks swapped, so each side starts in turn. The score counts until you pick a new game.</string>
 </resources>

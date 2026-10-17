@@ -16,6 +16,6 @@ public class StartTicTacToeTool extends JarvisTool {
         context.startActivity(new Intent(context, GameActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtra(GameActivity.EXTRA_START_WITH_JARVIS, true));
-        return "Opened Tic-tac-toe with a new game: the player is X and moves first, you are O.";
+        return "Opened Tic-tac-toe with a new game against you, with the mark the player last chose.";
     }
 }
