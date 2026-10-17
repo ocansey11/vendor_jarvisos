@@ -11,6 +11,16 @@
     <string name="status_ready">Service ready · %1$d tools · %2$s</string>
     <string name="status_model_ready">model loaded</string>
     <string name="status_model_missing">no model loaded</string>
+    <string name="test_mode">Test</string>
+    <!-- Test mode status line: engine, chat model, fast path. -->
+    <string name="status_test">%1$s · %2$s\n%3$s</string>
+    <string name="status_fast_on">fast path on · Needle runs a tool at confidence ≥ %1$.2f</string>
+    <string name="status_fast_off">fast path off · every request goes to the chat model</string>
+    <string name="trace_needle_ran">⚡ Needle %1$.2f ≥ %2$.2f · decided in %3$d ms · ran it</string>
+    <string name="trace_needle_passed">⚡ Needle %1$.2f &lt; %2$.2f · would call %3$s · passed on</string>
+    <string name="trace_model">🧠 %1$s</string>
+    <string name="trace_no_tool">no tool</string>
+    <string name="trace_total">⏱ %1$.1f s</string>
 
     <string name="chat_no_model">No language model is loaded, so Jarvis cannot answer questions yet. Tools still work: try the Tools tab.</string>
     <string name="chat_hint">Ask Jarvis</string>
@@ -24,6 +34,11 @@
     <string name="chat_empty">Nothing asked yet.</string>
 
     <string name="tools_empty">No tools are registered.</string>
+    <string name="tools_reset">Reset</string>
+    <string name="tools_reset_text">Start: torch, Do Not Disturb, Wi-Fi and Bluetooth off; brightness and volume 30%.</string>
+    <string name="tools_resetting">Resetting…</string>
+    <string name="tools_reset_done">Reset done at %1$s.</string>
+    <string name="tools_reset_failed">Reset: %1$s</string>
     <string name="tools_builtin">Built into JarvisOS</string>
     <plurals name="tools_count">
         <item quantity="one">%d tool</item>

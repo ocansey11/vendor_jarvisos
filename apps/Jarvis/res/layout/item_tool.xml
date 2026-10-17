@@ -2,11 +2,18 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="center_vertical"
     android:minHeight="56dp"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:paddingStart="76dp"
     android:paddingEnd="20dp"
     android:paddingVertical="10dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
 
     <TextView
         android:id="@+id/title"
@@ -25,4 +32,16 @@
         android:paddingTop="2dp"
         android:textColor="@color/text_muted"
         android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Test mode: what this tool has done to the device, read from Android. -->
+    <TextView
+        android:id="@+id/state"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/accent"
+        android:textSize="14sp"
+        android:visibility="gone" />
 </LinearLayout>

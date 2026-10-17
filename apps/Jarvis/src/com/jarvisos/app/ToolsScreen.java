@@ -2,6 +2,8 @@ package com.jarvisos.app;
 
 import android.app.AlertDialog;
 import android.content.pm.PackageManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.jarvis.JarvisManager;
 import android.text.InputType;
 import android.util.Log;
@@ -21,31 +23,124 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The Tools tab: the apps that own tools, each opening to show its tools, the
  * way the registry stores them (one AppRecord, many ToolRecords). Tapping a
  * tool opens a form built from its declared parameters; Run calls the tool
  * through the service, with no model involved, and shows its reply.
+ *
+ * In test mode each tool that changes the device shows its current state, read
+ * from Android, and Reset puts those back to a known start through the same
+ * tools.
  */
 class ToolsScreen {
 
     private static final String TAG = "JarvisApp";
 
+    /** Reset: the calls that put the device back to the start the reset bar describes. */
+    private static final String[][] RESET = {
+        {"set_flashlight",   "{\"enabled\":false}"},
+        {"set_dnd",          "{\"mode\":\"off\"}"},
+        {"toggle_wifi",      "{\"enabled\":false}"},
+        {"toggle_bluetooth", "{\"enabled\":false}"},
+        {"set_brightness",   "{\"level\":30}"},
+        {"set_volume",       "{\"level\":30}"},
+    };
+
     private final MainActivity mActivity;
     /** One entry per owning app, each holding that app's tools. */
     private final List<List<Tool>> mApps = new ArrayList<>();
     private final TextView mEmpty;
+    private final ExpandableListView mList;
+    private final View mResetBar;
+    private final TextView mResetText;
+    private final Button mReset;
+    private final DeviceState mDevice;
+    private boolean mTestMode;
+    private boolean mFollowing;
+    /** Test mode: tool name to its current state; empty otherwise. */
+    private Map<String, String> mStates = Collections.emptyMap();
 
     ToolsScreen(MainActivity activity) {
         mActivity = activity;
         mEmpty = activity.findViewById(R.id.tools_empty);
-        ExpandableListView list = activity.findViewById(R.id.tools_list);
-        list.setAdapter(mAdapter);
-        list.setOnChildClickListener((parent, view, app, tool, id) -> {
+        mResetBar  = activity.findViewById(R.id.tools_reset_bar);
+        mResetText = activity.findViewById(R.id.tools_reset_text);
+        mReset     = activity.findViewById(R.id.tools_reset);
+        mReset.setOnClickListener(v -> reset());
+        mDevice = new DeviceState(activity);
+        mList = activity.findViewById(R.id.tools_list);
+        mList.setAdapter(mAdapter);
+        mList.setOnChildClickListener((parent, view, app, tool, id) -> {
             open(mApps.get(app).get(tool));
             return true;
+        });
+    }
+
+    void setTestMode(boolean on) {
+        mTestMode = on;
+        mResetBar.setVisibility(on ? View.VISIBLE : View.GONE);
+        if (!on) mStates = Collections.emptyMap();
+        mAdapter.notifyDataSetChanged();
+        if (on) expandBuiltIn();
+    }
+
+    /** Opens the built-in tools, whose states test mode is there to show. */
+    private void expandBuiltIn() {
+        for (int i = 0; i < mApps.size(); i++) {
+            if (mApps.get(i).get(0).builtIn) mList.expandGroup(i);
+        }
+    }
+
+    /** Starts following the device for test mode; {@link #showStates} then reads it. */
+    void startStates() {
+        if (mFollowing) return;
+        mFollowing = true;
+        mDevice.start(new Handler(Looper.getMainLooper()));
+    }
+
+    void stopStates() {
+        if (!mFollowing) return;
+        mFollowing = false;
+        mDevice.stop();
+    }
+
+    /** Re-reads the device and redraws the rows if anything changed. */
+    void showStates() {
+        if (!mTestMode) return;
+        Map<String, String> states = mDevice.read();
+        if (states.equals(mStates)) return;
+        mStates = states;
+        mAdapter.notifyDataSetChanged();
+    }
+
+    /** Runs the RESET calls one after another through the service, as the Run button does. */
+    private void reset() {
+        mReset.setEnabled(false);
+        mResetText.setText(R.string.tools_resetting);
+        mActivity.call(jarvis -> {
+            StringBuilder failures = new StringBuilder();
+            for (String[] call : RESET) {
+                String reply = jarvis.callTool(call[0], call[1]);
+                if (reply == null || reply.startsWith("Error")) {
+                    if (failures.length() > 0) failures.append("; ");
+                    failures.append(call[0]).append(": ").append(reply);
+                }
+            }
+            return failures.toString();
+        }, (failures, error) -> {
+            mReset.setEnabled(true);
+            String problem = error != null ? error : failures;
+            mResetText.setText(problem.isEmpty()
+                    ? mActivity.getString(R.string.tools_reset_done,
+                            android.text.format.DateFormat.getTimeFormat(mActivity)
+                                    .format(new java.util.Date()))
+                    : mActivity.getString(R.string.tools_reset_failed, problem));
+            showStates();
         });
     }
 
@@ -70,6 +165,7 @@ class ToolsScreen {
             mEmpty.setText(error != null ? error : mActivity.getString(R.string.tools_empty));
             mEmpty.setVisibility(mApps.isEmpty() ? View.VISIBLE : View.GONE);
             mAdapter.notifyDataSetChanged();
+            if (mTestMode) expandBuiltIn();
         });
     }
 
@@ -236,6 +332,10 @@ class ToolsScreen {
             Tool t = mApps.get(app).get(tool);
             ((TextView) view.findViewById(R.id.title)).setText(t.name);
             ((TextView) view.findViewById(R.id.subtitle)).setText(t.description);
+            TextView state = view.findViewById(R.id.state);
+            String value = t.builtIn ? mStates.get(t.name) : null;
+            state.setText(value);
+            state.setVisibility(value != null ? View.VISIBLE : View.GONE);
             return view;
         }
     };

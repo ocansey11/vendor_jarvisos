@@ -1,5 +1,7 @@
 package com.jarvisos.app;
 
+import android.jarvis.JarvisManager;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -12,6 +14,10 @@ import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,15 +25,20 @@ import java.util.List;
  * The Chat tab: sends what the user types to JarvisManager.query, or what
  * they say to JarvisManager.queryWithAudio, and shows the reply as it comes
  * back, unedited. The conversation is kept in memory
- * only; the service keeps its own record.
+ * only; the service keeps its own record. In test mode each reply also shows
+ * the service's trace of it: Needle's choice, the tools that ran, the times.
  */
 class ChatScreen {
+
+    private static final String TAG = "JarvisApp";
 
     private static final class Message {
         final boolean fromUser;
         String text;
         boolean pending;
         boolean failed;
+        /** Test mode: what happened inside this reply; null until it is known. */
+        String trace;
 
         Message(boolean fromUser, String text) {
             this.fromUser = fromUser;
@@ -43,6 +54,7 @@ class ChatScreen {
     private final VoiceRecorder mRecorder = new VoiceRecorder();
     private final View mNotice;
     private final View mEmpty;
+    private boolean mTestMode;
 
     ChatScreen(MainActivity activity) {
         mActivity = activity;
@@ -68,6 +80,11 @@ class ChatScreen {
         });
     }
 
+    void setTestMode(boolean on) {
+        mTestMode = on;
+        mAdapter.notifyDataSetChanged();
+    }
+
     /** Shows or hides the "no model loaded" notice. */
     void setModelReady(boolean ready) {
         mNotice.setVisibility(ready ? View.GONE : View.VISIBLE);
@@ -78,7 +95,72 @@ class ChatScreen {
         if (query.isEmpty() || !mSend.isEnabled()) return;
         mInput.setText("");
         final Message reply = ask(query);
-        mActivity.call(jarvis -> jarvis.query(query), (result, error) -> show(reply, result, error));
+        final Message request = mMessages.get(mMessages.size() - 2);
+        mActivity.call(jarvis -> jarvis.query(query), (result, error) -> {
+            show(reply, result, error);
+            if (mTestMode && error == null) fetchTrace(request, reply);
+        });
+    }
+
+    /**
+     * Test mode: reads the service's trace of the request just answered and
+     * puts it under the reply. For a spoken request, the user's bubble then
+     * shows what was heard.
+     */
+    private void fetchTrace(Message request, Message reply) {
+        mActivity.call(JarvisManager::getStatus, (json, error) -> {
+            if (error != null) return;
+            try {
+                JSONObject trace = new JSONObject(json).optJSONObject("last");
+                if (trace == null) return;
+                if (trace.optBoolean("spoken")) {
+                    String heard = trace.optString("request");
+                    if (!heard.isEmpty()) request.text = "🎤 " + heard;
+                } else if (!trace.optString("request").equals(request.text)) {
+                    return;   // someone else's request (the shell) came in between
+                }
+                reply.trace = describe(trace);
+                mAdapter.notifyDataSetChanged();
+            } catch (JSONException e) {
+                Log.w(TAG, "Unreadable trace", e);
+            }
+        });
+    }
+
+    /** The trace as a few short lines: who decided, which tools ran with what, how long. */
+    private String describe(JSONObject trace) throws JSONException {
+        StringBuilder out = new StringBuilder();
+        JSONObject needle = trace.optJSONObject("needle");
+        final boolean fast = "fast".equals(trace.optString("path"));
+        if (needle != null) {
+            double confidence = needle.optDouble("confidence");
+            double bar = needle.optDouble("bar");
+            out.append(fast
+                    ? mActivity.getString(R.string.trace_needle_ran, confidence, bar,
+                            needle.optLong("ms"))
+                    : mActivity.getString(R.string.trace_needle_passed, confidence, bar,
+                            needle.optString("calls").isEmpty()
+                                    ? mActivity.getString(R.string.trace_no_tool)
+                                    : needle.optString("calls")));
+        }
+        if (!fast) {
+            if (out.length() > 0) out.append('\n');
+            out.append(mActivity.getString(R.string.trace_model, trace.optString("model")));
+        }
+        JSONArray tools = trace.optJSONArray("tools");
+        if (tools == null || tools.length() == 0) {
+            if (!fast) out.append(" · ").append(mActivity.getString(R.string.trace_no_tool));
+        } else {
+            for (int i = 0; i < tools.length(); i++) {
+                JSONObject tool = tools.getJSONObject(i);
+                out.append("\n  → ").append(tool.optString("name")).append(' ')
+                        .append(tool.optString("args"))
+                        .append("\n    ").append(tool.optString("result"));
+            }
+        }
+        out.append('\n').append(mActivity.getString(R.string.trace_total,
+                trace.optLong("ms") / 1000.0));
+        return out.toString();
     }
 
     /** First tap starts listening; it stops by itself after the speaker does, or on a second tap. */
@@ -95,6 +177,7 @@ class ChatScreen {
             return;
         }
         final Message reply = ask(mActivity.getString(R.string.chat_spoken));
+        final Message request = mMessages.get(mMessages.size() - 2);
         reply.text = mActivity.getString(R.string.chat_listening);
         mSpeak.setText(R.string.chat_stop);
         mAdapter.notifyDataSetChanged();
@@ -106,8 +189,10 @@ class ChatScreen {
             }
             reply.text = mActivity.getString(R.string.chat_thinking);
             mAdapter.notifyDataSetChanged();
-            mActivity.call(jarvis -> jarvis.queryWithAudio("", pcm),
-                    (result, error) -> show(reply, result, error));
+            mActivity.call(jarvis -> jarvis.queryWithAudio("", pcm), (result, error) -> {
+                show(reply, result, error);
+                if (mTestMode && error == null) fetchTrace(request, reply);
+            });
         });
     }
 
@@ -143,6 +228,9 @@ class ChatScreen {
                 view = mActivity.getLayoutInflater().inflate(R.layout.item_message, parent, false);
             }
             Message message = mMessages.get(position);
+            TextView trace = view.findViewById(R.id.trace);
+            trace.setText(message.trace);
+            trace.setVisibility(mTestMode && message.trace != null ? View.VISIBLE : View.GONE);
             TextView text = view.findViewById(R.id.text);
             text.setText(message.text);
             text.setBackgroundResource(message.fromUser
@@ -150,9 +238,10 @@ class ChatScreen {
             text.setTextColor(mActivity.getColor(message.fromUser ? R.color.on_accent
                     : message.failed ? R.color.error
                     : message.pending ? R.color.text_muted : R.color.text));
-            ((FrameLayout.LayoutParams) text.getLayoutParams()).gravity =
+            View column = view.findViewById(R.id.column);
+            ((FrameLayout.LayoutParams) column.getLayoutParams()).gravity =
                     message.fromUser ? Gravity.END : Gravity.START;
-            text.requestLayout();
+            column.requestLayout();
             return view;
         }
     };

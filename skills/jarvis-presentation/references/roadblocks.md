@@ -998,10 +998,24 @@ notes; entries 7 onward were written as they happened.
   pw.println(runQuery(getNextArgRequired()));
   ```
 
-- **Fix:** not made yet. Clear the identity in the shell `query`, `tool`
-  and `voice` commands as the Binder methods do.
-- **Proven to:** cause seen in the tool results; fix untested. The Binder
-  path (the Jarvis app) is not affected.
+- **Fix (17 Oct, same afternoon):** the shell `query`, `tool` and `voice`
+  commands now clear the identity as the Binder methods do:
+
+  ```java
+  case "query": {
+      final String text = getNextArgRequired();
+      final long token = Binder.clearCallingIdentity();
+      try { pw.println(runQuery(text)); } finally { Binder.restoreCallingIdentity(token); }
+      return 0;
+  }
+  ```
+
+  The first build of it failed: `variable token is already defined in method
+  onCommand(String)`. The cases of a Java `switch` share one scope, and the
+  old `query` case had no braces of its own.
+- **Proven to:** emulator. From the shell, `set_brightness`, `set_alarm` and
+  `open_app` now succeed (brightness reads 77/255 = 30%). The Binder path
+  (the Jarvis app) was never affected.
 - **For the talk:** a score of 12/12 hid one wrong argument and three
   failures of our own. Score what happened, not what was called.
 
