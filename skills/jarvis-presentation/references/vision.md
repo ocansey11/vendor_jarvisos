@@ -231,8 +231,12 @@ and objectbox. we may need to build our own."*
 - **Cactus** is proprietary. Free only below $2M revenue **and** $2M funding;
   exceeding either ends the grant with 30 days to buy a commercial licence.
   It is arm64-only (built with `-march=armv8.2-a+...+i8mm`), which is why
-  nothing can be tested on the emulator. It changes fast: v2 dropped the
-  `.gguf` files Jarvis was written for.
+  nothing can be tested on the emulator. It changes fast: the `.gguf` files
+  Jarvis was written for were dropped in Cactus V1 (5 Sept 2025, commit
+  `843f0d8`), and v2.0 (July 2026) replaced the v1 model folders with
+  compiled-graph bundles. *Correction, 17 Oct 2026:* this line used to say
+  v2 dropped `.gguf`, and that error went onto the Canva timeline. Cactus's
+  Flutter docs still showed `model.gguf` until 4 Mar 2026 (`078340f`).
 - **ObjectBox** is also proprietary underneath. Its Java bindings are Apache
   2.0, but the native library inside the system image is under a closed
   "Binary License" whose terms for bundling in an OS are not published.
