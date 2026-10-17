@@ -2,17 +2,20 @@ package com.jarvisos.tictactoe;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Insets;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 
 /**
- * The screen: a 3x3 board, Jarvis's speech bubble, "Jarvis is thinking…",
- * the Play with Jarvis button and the evaluate_moves switch. Everything it
+ * The screen: who O is, a 3x3 board, Jarvis's speech bubble, "Jarvis is
+ * thinking…", New game, Play with (or Stop playing with) Jarvis, and the
+ * evaluate_moves switch. Everything it
  * shows comes from {@link Game}; nothing here talks to Jarvis.
  */
 public class GameActivity extends Activity implements Game.Screen {
@@ -30,6 +33,8 @@ public class GameActivity extends Activity implements Game.Screen {
     private View mThinkingRow;
     private TextView mThinking;
     private CompoundButton mEvaluateSwitch;
+    private TextView mOpponent;
+    private Button mJarvisButton;
 
     /** Counts the seconds while Jarvis thinks; a turn takes about 20 s on the emulator. */
     private final Runnable mTick = new Runnable() {
@@ -47,13 +52,20 @@ public class GameActivity extends Activity implements Game.Screen {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
+        // Android 15 draws apps edge to edge: keep the controls clear of the
+        // status and navigation bars.
+        findViewById(R.id.root).setOnApplyWindowInsetsListener((v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return WindowInsets.CONSUMED;
+        });
         mGame = Game.get(this);
         int[] ids = {R.id.cell0, R.id.cell1, R.id.cell2, R.id.cell3, R.id.cell4,
                 R.id.cell5, R.id.cell6, R.id.cell7, R.id.cell8};
         for (int i = 0; i < 9; i++) {
             final int cell = i;
             mCells[i] = findViewById(ids[i]);
-            mCells[i].setOnClickListener(v -> mGame.playerMoved(cell));
+            mCells[i].setOnClickListener(v -> mGame.cellTapped(cell));
         }
         mBubble = findViewById(R.id.bubble);
         mStatus = findViewById(R.id.status);
@@ -61,7 +73,12 @@ public class GameActivity extends Activity implements Game.Screen {
         mThinking = findViewById(R.id.thinking);
         mEvaluateSwitch = findViewById(R.id.evaluate_switch);
         mEvaluateSwitch.setOnCheckedChangeListener((b, on) -> mGame.setEvaluateMovesOn(on));
-        findViewById(R.id.play).setOnClickListener(v -> mGame.startWithJarvis());
+        mOpponent = findViewById(R.id.opponent);
+        mJarvisButton = findViewById(R.id.play);
+        mJarvisButton.setOnClickListener(v -> {
+            if (jarvisPlaying()) mGame.stopPlayingWithJarvis(); else mGame.startWithJarvis();
+        });
+        findViewById(R.id.new_game).setOnClickListener(v -> mGame.newGame());
     }
 
     @Override
@@ -100,11 +117,10 @@ public class GameActivity extends Activity implements Game.Screen {
     public void onGameChanged() {
         Board board = mGame.board();
         int[] line = board.winningLine();
-        boolean playersTurn = mGame.turn() == Game.Turn.PLAYER;
         for (int i = 0; i < 9; i++) {
             char mark = board.at(i);
             mCells[i].setText(mark == Board.EMPTY ? "" : String.valueOf(mark));
-            mCells[i].setEnabled(playersTurn && mark == Board.EMPTY);
+            mCells[i].setEnabled(mGame.canTap(i));
             mCells[i].setActivated(line != null && (line[0] == i || line[1] == i || line[2] == i));
         }
         String bubble = mGame.bubble();
@@ -117,7 +133,16 @@ public class GameActivity extends Activity implements Game.Screen {
         if (mEvaluateSwitch.isChecked() != mGame.evaluateMovesOn()) {
             mEvaluateSwitch.setChecked(mGame.evaluateMovesOn());
         }
-        // The switch applies to the next game: a session's tools are fixed when it starts.
-        mEvaluateSwitch.setEnabled(mGame.turn() == Game.Turn.OVER);
+        // The switch applies to the next game with Jarvis: a session's tools
+        // are fixed when it starts.
+        mEvaluateSwitch.setEnabled(!jarvisPlaying());
+        mOpponent.setText(mGame.opponent() == Game.Opponent.JARVIS
+                ? R.string.opponent_jarvis : R.string.opponent_friend);
+        mJarvisButton.setText(jarvisPlaying() ? R.string.stop : R.string.play);
+    }
+
+    /** A game with Jarvis is under way: the button offers to stop it. */
+    private boolean jarvisPlaying() {
+        return mGame.opponent() == Game.Opponent.JARVIS && mGame.turn() != Game.Turn.OVER;
     }
 }

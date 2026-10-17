@@ -3,8 +3,8 @@
     <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
 
     <style name="Cell">
-        <item name="android:layout_width">92dp</item>
-        <item name="android:layout_height">92dp</item>
+        <item name="android:layout_width">84dp</item>
+        <item name="android:layout_height">84dp</item>
         <item name="android:layout_margin">4dp</item>
         <item name="android:textSize">40sp</item>
         <item name="android:textStyle">bold</item>

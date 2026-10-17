@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Tic-tac-toe</string>
-    <string name="title">Tic-tac-toe vs Jarvis</string>
+    <string name="title">Tic-tac-toe</string>
+    <string name="opponent_friend">O: a friend, on this phone</string>
+    <string name="opponent_jarvis">O: Jarvis</string>
+    <string name="new_game">New game</string>
     <string name="play">Play with Jarvis</string>
+    <string name="stop">Stop playing with Jarvis</string>
     <string name="thinking">Jarvis is thinking… %1$d s</string>
-    <string name="evaluate_switch">Jarvis may use evaluate_moves (next game)</string>
+    <string name="evaluate_switch">Jarvis may use evaluate_moves (next game with Jarvis)</string>
 </resources>

@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Scrolls so that the controls stay reachable on a small screen. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="center_horizontal"
-    android:padding="24dp"
-    android:background="@color/background"
-    android:fitsSystemWindows="true">
+    android:padding="24dp">
 
     <TextView
         android:layout_width="wrap_content"
@@ -16,6 +20,15 @@
         android:textColor="@color/text"
         android:textSize="26sp"
         android:textStyle="bold" />
+
+    <!-- Who plays O. X is always the person holding the phone. -->
+    <TextView
+        android:id="@+id/opponent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text"
+        android:textSize="16sp" />
 
     <!-- Jarvis's say() lines. -->
     <TextView
@@ -76,12 +89,23 @@
         android:textColor="@color/text"
         android:textSize="18sp" />
 
-    <Button
-        android:id="@+id/play"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="@string/play" />
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/new_game"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/new_game" />
+        <Button
+            android:id="@+id/play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="@string/play" />
+    </LinearLayout>
 
     <Switch
         android:id="@+id/evaluate_switch"
@@ -92,3 +116,4 @@
         android:text="@string/evaluate_switch"
         android:textColor="@color/text" />
 </LinearLayout>
+</ScrollView>
