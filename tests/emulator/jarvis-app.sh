@@ -50,6 +50,10 @@ echo "Status line"
 "$ADB" shell input keyevent KEYCODE_WAKEUP
 "$ADB" shell am start -W -n $PKG/.MainActivity >/dev/null 2>&1
 sleep 2
+# These checks are for the plain app; test mode is remembered, so switch it off.
+if screen | grep -q 'resource-id="'$PKG':id/test_mode"[^>]*checked="true"'; then
+    tap "Test"; sleep 2
+fi
 TOOLS="$("$ADB" shell cmd jarvis status | tr -d '\r' | sed -n 's/^tools: //p')"
 UI="$(screen)"
 expect "shows the service is ready"          "Service ready"       "$UI"

@@ -89,7 +89,12 @@ class ToolsScreen {
         mResetBar.setVisibility(on ? View.VISIBLE : View.GONE);
         if (!on) mStates = Collections.emptyMap();
         mAdapter.notifyDataSetChanged();
-        if (on) expandBuiltIn();
+        if (on) {
+            expandBuiltIn();
+        } else {
+            // Test mode opened the built-in tools; leaving it closes them again.
+            for (int i = 0; i < mApps.size(); i++) mList.collapseGroup(i);
+        }
     }
 
     /** Opens the built-in tools, whose states test mode is there to show. */
@@ -253,7 +258,7 @@ class ToolsScreen {
         if (turn != null && tool.name.equals(turn.optString("tool"))) {
             JSONObject data = lastData(latest(tool.packageName));
             JSONArray choices = data != null ? data.optJSONArray(turn.optString("choices")) : null;
-            if (choices != null) {
+            if (choices != null && choices.length() > 0) {
                 StringBuilder values = new StringBuilder();
                 for (int i = 0; i < choices.length(); i++) {
                     if (i > 0) values.append(' ');
@@ -459,7 +464,7 @@ class ToolsScreen {
             TextView subtitle = view.findViewById(R.id.subtitle);
             boolean session = mTestMode && !first.builtIn && declared(first.packageName) != null;
             subtitle.setSingleLine(!session);
-            subtitle.setMaxLines(session ? 4 : 1);
+            subtitle.setMaxLines(session ? 10 : 1);
             subtitle.setText(first.builtIn ? mActivity.getString(R.string.tools_builtin)
                     : session ? sessionSummary(first.packageName) : first.packageName);
             ((TextView) view.findViewById(R.id.count)).setText(mActivity.getResources()

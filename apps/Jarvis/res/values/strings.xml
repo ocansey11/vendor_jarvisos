@@ -3,6 +3,19 @@
     <string name="app_name">Jarvis</string>
     <string name="tab_chat">Chat</string>
     <string name="tab_tools">Tools</string>
+    <string name="tab_history">History</string>
+    <string name="history_note">Kept for %1$d hours, then forgotten. What Jarvis learned from them stays.</string>
+    <string name="history_clear">Clear</string>
+    <string name="history_clear_confirm">Forget every conversation now? What Jarvis has learned is kept.</string>
+    <string name="history_empty">Nothing kept. Chats and app sessions, such as a game with Jarvis, show here for a day.</string>
+    <string name="history_tag_session">Session</string>
+    <string name="history_tag_voice">Voice</string>
+    <string name="history_count">%1$s · %2$d messages</string>
+    <string name="history_gone">This conversation has been forgotten.</string>
+    <string name="history_you">You</string>
+    <string name="history_jarvis">Jarvis</string>
+    <string name="history_app">App</string>
+    <string name="history_close">Close</string>
 
     <string name="status_checking">Checking the Jarvis service…</string>
     <string name="status_unavailable">The Jarvis service is not running on this device.</string>
@@ -55,7 +68,7 @@
     <string name="session_none">Session: none yet</string>
     <string name="session_open">Session open · %1$d turn(s)</string>
     <string name="session_open_thinking">Session open · %1$d turn(s) · Jarvis is thinking</string>
-    <string name="session_last">Last session: %1$d turn(s), %2$d m %3$02d s · ended: %4$s</string>
+    <string name="session_last">Last session: %1$d turn(s), %2$d m %3$02d s · %4$s</string>
     <string name="session_board">Board %1$s · turn: %2$s</string>
     <string name="session_last_turn">Jarvis\'s last turn: %1$s</string>
     <string name="session_tool_start">starts a session</string>

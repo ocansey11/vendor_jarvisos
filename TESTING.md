@@ -24,6 +24,7 @@ The two parts can also be run on their own:
 
 ```bash
 frameworks/base/services/jarvis/objectbox/test.sh        # layer 1
+frameworks/base/services/jarvis/objectbox/history-test.sh   # layer 1: History (44 checks)
 cd vendor/jarvisos/tests && JAVA_HOME=../../../prebuilts/jdk/jdk21/linux-x86 ./gradlew test   # layer 2
 ```
 
@@ -110,15 +111,29 @@ from the Tools tab shows its reply; a message typed in Chat shows the
 service's own reply. To try a change to the app without an image build:
 `m Jarvis && adb install -r $ANDROID_PRODUCT_OUT/system/app/Jarvis/Jarvis.apk`.
 
+`history-test.sh` (17 Oct 2026) runs the service's `history/History.java`
+against a real ObjectBox store on the host, with stubs for `android.util.Log`
+and `android.os.SystemProperties` and the org.json jar from the Gradle cache:
+a chat is kept with its tool calls, a request within 30 minutes continues the
+conversation, a game session keeps its events, Jarvis's calls and lines in
+order, DreamWorker gets one input per record, and anything older than
+`persist.sys.jarvis.history_hours` (default 24) is forgotten with its
+messages. 44 checks.
+
 `tictactoe.sh` tests sessions (`AGENT_EXPERIENCE.md` section 11) with the
 sample game `apps/JarvisTicTacToe`, which is part of the image: the session
 manifest is read at boot; outside a session `move` is refused and not
-offered to Needle; the "Play with Jarvis" button opens a session; during it
+offered to Needle; the game opens with its new-game pop-up and works without
+Jarvis (a friend game opens no session; pause and resume); "Play with
+Jarvis" in the pop-up opens a session; pause ends it and resume opens a new
+one; during it
 `set_alarm` and `open_app` are refused and `say` reaches the game's speech
 bubble; Home and killing the app end it. Without `--quick` it then plays
 three whole games with uiautomator taps (the player: win, else block, else
 centre, corners, edges): `evaluate_moves` on, off, and a game started with
-`cmd jarvis query "let's play tic-tac-toe"`. Each Jarvis turn's trace
+`cmd jarvis query "let's play tic-tac-toe"`. After the first game it checks
+the game is in `cmd jarvis history`, then a rematch, where the marks swap
+and Jarvis, now X, must make the first move. Each Jarvis turn's trace
 (model calls, tool calls, times, prompt tokens reused) is printed and kept in
 `~/tictactoe-*.log`; `cmd jarvis session` shows the last one. It needs the
 chat model; Needle is used for the typed start request. The taps are

@@ -499,12 +499,51 @@ Answered by the first slice, for now (Kevin may change them):
   shown, not spoken.
 - `player_said` and any other free-text event; the sample sends only data.
 - Facts about the user: wired, but there are none on the emulator.
-- Persistence: sessions are in memory; a reboot ends them. The session
-  manifests are read again at boot.
+- Persistence: an open session is in memory; a reboot ends it. The session
+  manifests are read again at boot. Since 17 Oct 2026 an ended session is
+  kept in History (11.13) for about a day.
 - An SDK for apps outside the ROM: today an app must be built in the tree
   with `platform_apis` and installed in `/system` to use the `@hide` API.
 - Nothing has run on a phone.
 
+
+### 11.13 After a session: History, and forgetting (17 October 2026)
+
+Kevin wanted to show, after a game, what Jarvis was given and what it did.
+Until now Jarvis kept nothing: the `Conversation` and `Message` entities
+existed but no code wrote them, and DreamWorker's input (`AgentSession`) was
+written only by `SubAgentExecutor`, which nothing calls. So DreamWorker had
+never had anything to learn from.
+
+- **Kept:** each chat request (with the tools it ran and the reply) and each
+  ended session (its events from the app, Jarvis's tool calls and the lines
+  it said, how it ended) are a `Conversation` with `Message`s
+  (`history/History.java`). Each record also writes a finished
+  `AgentSession`, DreamWorker's input. A session with no events and no turns
+  is not kept.
+- **Forgotten:** raw conversations are the sensitive part. Everything older
+  than `persist.sys.jarvis.history_hours` (default 24) is deleted, at boot,
+  after each record and on each listing, whether or not DreamWorker has run.
+  What DreamWorker learned (`UserContext` facts) stays. Kevin: conversations
+  "definitely dont last after a day".
+- **Shown:** the Jarvis app's History tab lists chats and sessions together
+  (sessions tagged), newest first; a touch shows the transcript.
+  `IJarvisService.listConversations`, `getConversation`, `clearHistory`;
+  `cmd jarvis history [clear | ID]`; `cmd jarvis dream` runs DreamWorker now.
+- **Test mode, Tools tab:** the open or last session of each app, its last
+  board and values, and Jarvis's last turn (`getStatus` "sessions"),
+  read-only: nothing outside a session runs a session tool.
+- **The fence is per session, not per game.** Outside a session Jarvis uses
+  every tool; any app may declare a session.
+
+The game itself was redesigned the same night after Kevin's review ("lets not
+make a poorly designed game just because jarvis is the main theme"): it is a
+two-player game first, with a new-game pop-up (X or O, X moves first; with
+Jarvis or a friend), pause and resume, rematch with the marks swapped and a
+score, and the rules behind an info button. Jarvis plays only when invited,
+and only on its own turn; when Jarvis is too slow the game closes the session
+(which stops the turn inside Jarvis), plays a random cell for it and opens a
+new session.
 
 ## 12. The tool contract: action, values, state
 

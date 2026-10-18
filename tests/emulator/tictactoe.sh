@@ -1,9 +1,11 @@
 #!/bin/bash
 # End-to-end test of sessions (Agent Experience, AGENT_EXPERIENCE.md section 11)
 # with the sample game on a running emulator: the session manifest is read at
-# install, the tool fence holds inside and outside a session, and Jarvis
-# plays whole games of tic-tac-toe against moves tapped into the game through
-# uiautomator (synthetic taps, not a person). Needs the chat model installed.
+# install, the tool fence holds inside and outside a session, the game works
+# without Jarvis (a friend game, pause and resume), and Jarvis plays whole
+# games of tic-tac-toe against moves tapped into the game through uiautomator
+# (synthetic taps, not a person), as O and, after a rematch, as X. Finished
+# games are kept in Jarvis's history. Needs the chat model installed.
 #   vendor/jarvisos/tests/emulator/tictactoe.sh            (all of it, ~15 min)
 #   vendor/jarvisos/tests/emulator/tictactoe.sh --quick    (no full games)
 # Each turn's trace (model calls, tool calls, times) goes to ~/tictactoe-*.log.
@@ -91,7 +93,7 @@ for node in re.findall(r"<node [^>]*>", sys.stdin.read()):
     if "id/" + sys.argv[1] + "\"" in node:
         print(re.search(r" text=\"([^\"]*)\"", node).group(1)); break' "$1"
 }
-open_game() {   # open_game [true|false]: a fresh game screen, evaluate_moves switch set
+open_game() {   # open_game [true|false]: a fresh game, its new-game pop-up up, evaluate_moves set
     "$ADB" shell am force-stop $PKG
     "$ADB" shell input keyevent KEYCODE_WAKEUP
     "$ADB" shell am start -W -n $PKG/.GameActivity --ez evaluate_moves "${1:-true}" >/dev/null 2>&1
@@ -107,7 +109,7 @@ play_game() {
     local last_turn; last_turn="$(session | sed -n 's/^last turn: //p')"
     for move in 1 2 3 4 5; do
         ui="$(screen)"; b="$(echo "$ui" | board)"; st="$(echo "$ui" | field status)"
-        case "$st" in *win*|*Draw*|*left*|*stopped*) break;; esac
+        case "$st" in *win*|*Draw*|*left*|*Paused*) break;; esac
         cell="$(pick "$b")"
         [ -n "$cell" ] || break
         "$ADB" shell input tap $(echo "$ui" | centre "cell $cell")
@@ -169,6 +171,21 @@ refuse "ordinary tools still run"          "refused" "$(tool get_battery_status)
 expect "a model is not offered move"       "calls:" "$("$ADB" shell "cmd jarvis route 'play cell 4'" | tr -d '\r')"
 refuse "(Needle's choice is not move)"     "move{" "$("$ADB" shell "cmd jarvis route 'play cell 4'" | tr -d '\r' | tr -d ' ')"
 
+echo "The game without Jarvis"
+open_game true
+UI="$(screen)"
+expect "opens with the new-game pop-up"    'text="Play with a friend"' "$UI"
+expect "you choose X or O"                 'text="X moves first."' "$UI"
+tap "Play with a friend"
+expect "a friend game opens no session"    "open: none" "$(session)"
+"$ADB" shell input tap $(screen | centre "cell 0"); sleep 1
+"$ADB" shell input tap $(screen | centre "cell 4"); sleep 1
+expect "both marks are played by hand"     "X...O...." "$(screen | board)"
+tap "Pause"
+expect "pause stops play"                  "Paused" "$(screen | field status)"
+tap "Resume"
+expect "resume carries on with the board"  "X to move" "$(screen | field status)"
+
 echo "Start from the app (Play with Jarvis)"
 open_game true
 tap "Play with Jarvis"
@@ -188,6 +205,12 @@ expect "say reaches the app"               "Said to the user: Hello from the tes
 sleep 1
 expect "and shows as the speech bubble"    "Hello from the test" "$(screen | field bubble)"
 expect "a move out of turn is refused by the game" "Error: it is not your turn" "$(tool move '{"cell":0}')"
+
+echo "Pause and resume with Jarvis"
+tap "Pause"
+expect "pause ends the session"            "open: none" "$(session)"
+tap "Resume"
+expect "resume opens a new one"            "open: $PKG/tic_tac_toe" "$(session)"
 
 echo "Ending"
 "$ADB" shell input keyevent KEYCODE_HOME; sleep 2
@@ -224,6 +247,19 @@ play_game
 expect "used evaluate_moves"               '"name":"evaluate_moves"' "$(cat "$LOG")"
 expect "the session ended with the game"   "game_over" "$(session)"
 G1_SAID=$SAID
+sleep 2
+H="$("$ADB" shell cmd jarvis history | tr -d '\r')"
+expect "the game is kept in history"       '"title":"Tic-tac-toe with Jarvis","mode":"session"' "$H"
+
+echo "Rematch: marks swap, so Jarvis plays X and moves first"
+tap "Rematch"
+expect "you are O now"                     "You: O · Jarvis: X" "$(screen | field players)"
+for i in $(seq 1 60); do
+    sleep 3; [[ "$(session)" == *"1 turn(s)"* && "$(session)" != *"in a turn"* ]] && break
+done
+expect "Jarvis made the first move"        "X" "$(screen | board | tr -d '.O')"
+tap "New game"
+expect "new game brings the pop-up back"   'text="Play with a friend"' "$(screen)"
 
 echo "Game 2: started by the button, evaluate_moves off"
 open_game false
@@ -244,7 +280,7 @@ START=$(date +%s)
 REPLY="$("$ADB" shell "cmd jarvis query \"let's play tic-tac-toe\"" | tr -d '\r')"
 echo "        reply after $(( $(date +%s) - START )) s: ${REPLY:0:200}"
 expect "the start tool ran"                "start_tic_tac_toe" "$(session; "$ADB" logcat -d -s ToolDispatcher | tail -20)"
-expect "the game is on screen"             "Tic-tac-toe vs Jarvis" "$(screen)"
+expect "the game is on screen, with Jarvis" "You: X · Jarvis: O" "$(screen | field players)"
 expect "and opened the session"            "open: $PKG/tic_tac_toe" "$(session)"
 play_game
 [[ "$GAME_RESULT" == *win* || "$GAME_RESULT" == *Draw* ]] && PASS=$((PASS+1)) && echo "  pass  ended in a result: $GAME_RESULT" \

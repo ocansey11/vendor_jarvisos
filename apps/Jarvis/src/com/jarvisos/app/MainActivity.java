@@ -65,9 +65,10 @@ public class MainActivity extends Activity {
 
     private JarvisManager mJarvis;
     private TextView mStatus;
-    private View mChatTab, mToolsTab, mChatPane, mToolsPane;
+    private View mChatTab, mToolsTab, mHistoryTab, mChatPane, mToolsPane, mHistoryPane;
     private ChatScreen mChat;
     private ToolsScreen mTools;
+    private HistoryScreen mHistory;
     private SharedPreferences mPrefs;
     private boolean mTestMode;
     private boolean mResumed;
@@ -81,14 +82,18 @@ public class MainActivity extends Activity {
         mStatus    = findViewById(R.id.status);
         mChatTab   = findViewById(R.id.tab_chat);
         mToolsTab  = findViewById(R.id.tab_tools);
+        mHistoryTab = findViewById(R.id.tab_history);
         mChatPane  = findViewById(R.id.chat);
         mToolsPane = findViewById(R.id.tools);
+        mHistoryPane = findViewById(R.id.history);
         mChat  = new ChatScreen(this);
         mTools = new ToolsScreen(this);
+        mHistory = new HistoryScreen(this);
 
-        mChatTab.setOnClickListener(v -> showTab(false));
-        mToolsTab.setOnClickListener(v -> showTab(true));
-        showTab(false);
+        mChatTab.setOnClickListener(v -> showTab(mChatTab));
+        mToolsTab.setOnClickListener(v -> showTab(mToolsTab));
+        mHistoryTab.setOnClickListener(v -> showTab(mHistoryTab));
+        showTab(mChatTab);
 
         mPrefs = getSharedPreferences("jarvis", MODE_PRIVATE);
         mTestMode = mPrefs.getBoolean(PREF_TEST_MODE, false);
@@ -163,11 +168,14 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void showTab(boolean tools) {
-        mChatTab.setSelected(!tools);
-        mToolsTab.setSelected(tools);
-        mChatPane.setVisibility(tools ? View.GONE : View.VISIBLE);
-        mToolsPane.setVisibility(tools ? View.VISIBLE : View.GONE);
+    private void showTab(View tab) {
+        mChatTab.setSelected(tab == mChatTab);
+        mToolsTab.setSelected(tab == mToolsTab);
+        mHistoryTab.setSelected(tab == mHistoryTab);
+        mChatPane.setVisibility(tab == mChatTab ? View.VISIBLE : View.GONE);
+        mToolsPane.setVisibility(tab == mToolsTab ? View.VISIBLE : View.GONE);
+        mHistoryPane.setVisibility(tab == mHistoryTab ? View.VISIBLE : View.GONE);
+        if (tab == mHistoryTab) mHistory.load();
     }
 
     /** Re-reads the service state and the tool list. */
@@ -181,6 +189,7 @@ public class MainActivity extends Activity {
             showStatus(json);
         });
         mTools.load();
+        if (mHistoryPane.getVisibility() == View.VISIBLE) mHistory.load();
     }
 
     private void showStatus(String json) {

@@ -43,8 +43,12 @@ public final class Game implements JarvisSession.Listener {
     private static final String TAG = "TicTacToe";
     /** The name in jarvis_session.xml. */
     static final String SESSION = "tic_tac_toe";
-    /** A Qwen3-1.7B turn takes about 20 s on the emulator; past this the game moves for Jarvis. */
-    private static final long TURN_TIMEOUT_MS = 120_000;
+    /**
+     * A Qwen3-1.7B turn takes 15 to 50 s on the emulator, and over 2 minutes
+     * while the server is busy building (17 Oct 2026). Past this the game
+     * moves for Jarvis.
+     */
+    private static final long TURN_TIMEOUT_MS = 180_000;
 
     /** What the screen shows; it re-reads the game on every change. */
     public interface Screen {
@@ -83,9 +87,7 @@ public final class Game implements JarvisSession.Listener {
     /** The switch for the talk's experiment: may Jarvis use evaluate_moves? */
     private boolean mEvaluateMovesOn = true;
 
-    private final Runnable mTurnTimeout = () -> {
-        if (jarvisToMove()) jarvisGaveUp("no move after " + TURN_TIMEOUT_MS / 1000 + " s");
-    };
+    private final Runnable mTurnTimeout = this::jarvisTimedOut;
 
     public static Game get(Context context) {
         if (sInstance == null) sInstance = new Game(context.getApplicationContext());
@@ -390,13 +392,36 @@ public final class Game implements JarvisSession.Listener {
     }
 
     private void jarvisGaveUp(String why) {
+        int cell = randomMoveForJarvis(why);
+        if (cell >= 0) mBubble = "(Jarvis got stuck, so the game played cell " + cell + " for it.)";
+        changed();
+    }
+
+    /**
+     * Jarvis took too long. The app ends the turn the one way it can: it
+     * closes the session, which stops the turn inside Jarvis, so a late move
+     * cannot arrive. Then it plays a random cell for Jarvis and opens a new
+     * session on the same board for the next turn.
+     */
+    private void jarvisTimedOut() {
+        if (!jarvisToMove()) return;
+        endSession(null);
+        int cell = randomMoveForJarvis("no move after " + TURN_TIMEOUT_MS / 1000 + " s");
+        if (cell >= 0) {
+            mBubble = "(Jarvis took too long, so the game played cell " + cell + " for it.)";
+        }
+        if (!mBoard.isOver()) openSession();   // on failure the game pauses and says why
+        changed();
+    }
+
+    /** @return the cell played, or -1 if there was none */
+    private int randomMoveForJarvis(String why) {
         List<Integer> legal = mBoard.legal();
-        if (legal.isEmpty()) return;
+        if (legal.isEmpty()) return -1;
         int cell = legal.get(mRandom.nextInt(legal.size()));
         Log.i(TAG, "Random move " + cell + " for Jarvis: " + why);
         jarvisMoves(cell);
-        mBubble = "(Jarvis got stuck, so the game played cell " + cell + " for it.)";
-        changed();
+        return cell;
     }
 
     // -------------------------------------------------------------------------

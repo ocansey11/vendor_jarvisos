@@ -61,7 +61,7 @@
             </intent-filter>
             <meta-data android:name="com.jarvisos.tool.name" android:value="move" />
             <meta-data android:name="com.jarvisos.tool.description"
-                android:value="Play your mark (O) in one empty cell. This ends your turn." />
+                android:value="Play your mark (the state calls it you) in one empty cell. This ends your turn." />
             <meta-data android:name="com.jarvisos.tool.input_schema"
                 android:resource="@xml/tool_move_schema" />
         </receiver>
