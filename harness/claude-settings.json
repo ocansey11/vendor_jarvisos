@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /root/android/lineage/vendor/jarvisos/harness/hooks/guard.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

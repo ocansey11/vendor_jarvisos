@@ -1,0 +1,353 @@
+#!/bin/bash
+# jh: the JarvisOS harness. One command to build, boot, test and inspect
+# JarvisOS on the build server, for people and for agents.
+#
+#   jh status                    what is running, what is built, what is pushed
+#   jh build [image|check|app NAME|rom|-- TARGETS...] [--wait]
+#   jh build wait | log          wait for the running build / follow its log
+#   jh emu up [--wipe] | down | restart
+#   jh models                    install any model the emulator is missing
+#   jh deploy APP                adb install -r an app built with `jh build app`
+#   jh test SUITE...             run test suites (`jh test list` names them)
+#   jh cycle app NAME SUITE... | image SUITE...   build, deploy, test in one go
+#   jh logs [MINUTES]            Jarvis lines from logcat, crashes, SELinux denials
+#   jh q TEXT                    ask Jarvis (cmd jarvis query), timed
+#   jh trace                     the last session turn (cmd jarvis session)
+#   jh watch on|off              Kevin is watching the emulator: no taps, no restarts
+#   jh install                   put jh on PATH and wire the Claude hooks and skill
+#
+# Every command ends with one line, "jh: OK ..." or "jh: FAIL ...", and exits
+# 0 or 1. Full output goes to ~/.jh/runs/; the path is printed. Builds always
+# run in tmux session `build`, the emulator in `emu`. See SKILL.md.
+
+TOP=/root/android/lineage
+HARNESS="$TOP/vendor/jarvisos/harness"
+ADB="$TOP/out/host/linux-x86/bin/adb"
+EMU_SCRIPTS="$TOP/vendor/jarvisos/tests/emulator"
+MODELS=~/jarvis-models
+STATE=~/.jh
+RUNS="$STATE/runs"
+WATCHING="$STATE/watching"
+EMU_LOCK="$STATE/emulator.lock"
+mkdir -p "$RUNS"
+cd "$TOP" || exit 1
+
+ok()   { echo "jh: OK $*"; exit 0; }
+fail() { echo "jh: FAIL $*"; exit 1; }
+note() { echo "[$(date +%H:%M:%S)] $*"; }
+stamp() { date +%Y%m%d-%H%M%S; }
+ash() { "$ADB" shell "$@" 2>&1 | tr -d '\r'; }
+have_session() { tmux has-session -t "$1" 2>/dev/null; }
+booted() { [ "$(ash getprop sys.boot_completed)" = 1 ]; }
+jarvis_ready() { ash cmd jarvis status | grep -q "ready: true"; }
+
+refuse_if_watching() {   # refuse_if_watching WHAT
+    [ -e "$WATCHING" ] || return 0
+    fail "Kevin is watching the emulator (since $(cat "$WATCHING")), so no $1. Ask him, then 'jh watch off'."
+}
+
+# ---------------------------------------------------------------- status
+
+# Repos JarvisOS owns, with the fork and branch they are pushed to.
+REPOS=(
+    "frameworks/base|git@github.com:ocansey11/android_frameworks_base.git"
+    "vendor/jarvisos|git@github.com:ocansey11/vendor_jarvisos.git"
+    "vendor/llama.cpp|git@github.com:ocansey11/llama.cpp.git"
+    "vendor/cactus|git@github.com:ocansey11/cactus.git"
+)
+
+cmd_status() {
+    local fast=0; [ "$1" = --fast ] && fast=1
+    echo "== repos (head, uncommitted files, on GitHub?)"
+    for r in "${REPOS[@]}"; do
+        local path=${r%%|*} url=${r#*|}
+        local branch head dirty pushed="?"
+        branch=$(git -C "$path" rev-parse --abbrev-ref HEAD 2>/dev/null)
+        head=$(git -C "$path" rev-parse --short=12 HEAD 2>/dev/null)
+        dirty=$(git -C "$path" status --porcelain 2>/dev/null | wc -l)
+        if [ $fast = 0 ]; then
+            local remote
+            remote=$(timeout 10 git ls-remote "$url" "refs/heads/$branch" 2>/dev/null | cut -c1-12)
+            if [ -z "$remote" ]; then pushed="unknown (no answer from GitHub)"
+            elif [ "$remote" = "$head" ]; then pushed="pushed"
+            elif git -C "$path" merge-base --is-ancestor "$remote" HEAD 2>/dev/null; then
+                pushed="NOT pushed: $(git -C "$path" rev-list --count "$remote"..HEAD) commit(s) ahead"
+            else pushed="differs from GitHub ($remote)"; fi
+        fi
+        printf "  %-17s %-14s %s  dirty=%s  %s\n" "$path" "$branch" "$head" "$dirty" "$pushed"
+    done
+    echo "== tmux"; tmux ls 2>/dev/null | sed 's/^/  /'
+    echo "== build"
+    if have_session build; then echo "  RUNNING in tmux 'build': $(ls -t ~/build-jarvis-emu-*.log ~/build-jarvis-full-*.log 2>/dev/null | head -1)"
+    else echo "  idle"; fi
+    [ -f ~/build-jarvis-emu.summary ] && echo "  last emulator build: $(head -1 ~/build-jarvis-emu.summary | cut -c1-200)"
+    [ -f ~/build-jarvis-full.summary ] && echo "  last Pong ROM build: $(head -1 ~/build-jarvis-full.summary | cut -c1-200)"
+    echo "== emulator"
+    if ! "$ADB" devices 2>/dev/null | grep -q 'emulator-.*device$'; then echo "  not running"
+    elif ! booted; then echo "  booting"
+    else
+        echo "  booted, up $(ash uptime | sed 's/.*up *//; s/,.*//')"
+        ash cmd jarvis status | grep -E "ready|engine|model|needle|speech" | sed 's/^/  /'
+    fi
+    [ -e "$WATCHING" ] && echo "  WATCHING: Kevin is watching since $(cat "$WATCHING") (no taps, no restarts)"
+    echo "== disk"; df -h / | awk 'NR==2 {print "  " $4 " free (" $5 " used)"}'
+    ok "status"
+}
+
+# ---------------------------------------------------------------- build
+
+# Waits for the build in tmux 'build' to finish and reports from its summary.
+build_wait() {
+    local summary=$1
+    while have_session build; do sleep 15; done
+    [ -f "$summary" ] || fail "build ended without a summary ($summary)"
+    sed -n '2,40p' "$summary"
+    head -1 "$summary" | grep -q '^exit=0' && ok "build: $(head -1 "$summary" | cut -c1-200)"
+    fail "build: $(head -1 "$summary" | cut -c1-200)"
+}
+
+cmd_build() {
+    local wait=0 args=() summary=~/build-jarvis-emu.summary script targets=()
+    for a in "$@"; do [ "$a" = --wait ] && wait=1 || args+=("$a"); done
+    case "${args[0]:-image}" in
+        wait) build_wait "$(ls -t ~/build-jarvis-emu.summary ~/build-jarvis-full.summary 2>/dev/null | head -1)" ;;
+        log)  exec tail -n 40 -f "$(ls -t ~/build-jarvis-emu-*.log ~/build-jarvis-full-*.log | head -1)" ;;
+        image) script="$EMU_SCRIPTS/build.sh" ;;
+        check) script="$EMU_SCRIPTS/build.sh"; targets=(services.jarvis) ;;
+        app)  [ -n "${args[1]}" ] || fail "usage: jh build app NAME (Jarvis, JarvisTicTacToe, JarvisAlarmDemo)"
+              script="$EMU_SCRIPTS/build.sh"; targets=("${args[1]}") ;;
+        rom)  script=~/jarvis-build.sh; summary=~/build-jarvis-full.summary ;;
+        --)   script="$EMU_SCRIPTS/build.sh"; targets=("${args[@]:1}") ;;
+        *)    fail "unknown build '${args[0]}' (image, check, app NAME, rom, -- TARGETS...)" ;;
+    esac
+    have_session build && fail "a build is already running in tmux 'build' (jh build wait)"
+    local mark="$STATE/build-start"; touch "$mark"; rm -f "$summary"
+    # Builds slow the emulator to a crawl; run them at low priority when it is up.
+    local nice=0; "$ADB" devices 2>/dev/null | grep -q 'emulator-.*device$' && nice=19
+    tmux new -d -s build "nice -n $nice $script ${targets[*]}"
+    note "started '$(basename "$script") ${targets[*]}' in tmux 'build' (nice $nice)"
+    [ $wait = 1 ] && build_wait "$summary"
+    ok "build started; 'jh build wait' reports when it ends"
+}
+
+# ---------------------------------------------------------------- emulator
+
+emu_down() {
+    refuse_if_watching "emulator shutdown"
+    "$ADB" emu kill >/dev/null 2>&1
+    for _ in $(seq 30); do "$ADB" devices | grep -q 'emulator-' || break; sleep 1; done
+    tmux kill-session -t emu 2>/dev/null
+    sleep 2
+}
+
+emu_up() {
+    if booted 2>/dev/null && jarvis_ready; then note "already up"; return 0; fi
+    have_session emu || tmux new -d -s emu "$EMU_SCRIPTS/run.sh $*"
+    note "booting (tmux 'emu')"
+    timeout 300 "$ADB" wait-for-device || fail "no emulator after 5 min; see tmux 'emu' and ~/emu-*.log"
+    for _ in $(seq 120); do booted && break; sleep 5; done
+    booted || fail "emulator did not finish booting in 10 min"
+    # A new /data brings back the setup wizard; skip it.
+    ash settings put global device_provisioned 1 >/dev/null
+    ash settings put secure user_setup_complete 1 >/dev/null
+    ash pm disable-user --user 0 org.lineageos.setupwizard >/dev/null
+    ash input keyevent KEYCODE_WAKEUP >/dev/null; ash input keyevent KEYCODE_HOME >/dev/null
+    for _ in $(seq 60); do jarvis_ready && break; sleep 5; done
+    jarvis_ready || fail "booted but Jarvis is not ready; try 'jh logs 5'"
+    note "booted, Jarvis ready"
+}
+
+ensure_models() {
+    local s; s=$(ash cmd jarvis status)
+    install() {
+        note "installing $1 model ($(basename "$2"))"
+        "$ADB" shell -T cmd jarvis install-model "$1" < "$2" 2>&1 | tr -d '\r' | tail -1
+    }
+    [[ "$s" == *"model primary: ready"* ]]      || install chat    "$MODELS/Qwen3-1.7B-Q8_0.gguf"
+    [[ "$s" == *"model rag: ready"* ]]          || install embed   "$MODELS/all-MiniLM-L6-v2-Q8_0.gguf"
+    [[ "$s" == *"needle: tool calling ready"* ]] || install needle "$MODELS/needle/needle3.cact"
+    [[ "$s" == *"speech ready"* ]]              || install whistle "$MODELS/needle/whistle.cact"
+}
+
+cmd_emu() {
+    case "$1" in
+        up)      shift; ( flock -w 600 9 || fail "emulator busy"; emu_up "$@"; ensure_models ) 9>"$EMU_LOCK" || exit 1
+                 ok "emulator up" ;;
+        down)    emu_down; ok "emulator down" ;;
+        restart) shift; ( flock -w 600 9 || fail "emulator busy"; emu_down; emu_up "$@"; ensure_models ) 9>"$EMU_LOCK" || exit 1
+                 ok "emulator restarted on the current image" ;;
+        *)       fail "usage: jh emu up [--wipe] | down | restart" ;;
+    esac
+}
+
+cmd_models() { booted || fail "emulator not running (jh emu up)"; ensure_models; ok "models: $(ash cmd jarvis status | grep -cE 'ready') ready lines"; }
+
+cmd_deploy() {
+    [ -n "$1" ] || fail "usage: jh deploy APP"
+    refuse_if_watching "app reinstall"
+    local apk; apk=$(find "$TOP"/out/target/product/emu64x/system* -maxdepth 4 -name "$1.apk" 2>/dev/null | head -1)
+    [ -n "$apk" ] || fail "no $1.apk under out/target/product/emu64x (jh build app $1)"
+    "$ADB" install -r "$apk" 2>&1 | tail -1 | grep -q Success || fail "adb install -r $apk"
+    ok "installed $(basename "$apk") ($(stat -c %y "$apk" | cut -c1-16))"
+}
+
+# ---------------------------------------------------------------- tests
+
+# name | needs emulator? | command (relative to the tree)
+SUITES=(
+    "host|no|vendor/jarvisos/tests/run-all.sh"
+    "history|no|frameworks/base/services/jarvis/objectbox/history-test.sh"
+    "check|yes|vendor/jarvisos/tests/emulator/check.sh"
+    "app-tools|yes|vendor/jarvisos/tests/emulator/app-tools.sh"
+    "jarvis-app|yes|vendor/jarvisos/tests/emulator/jarvis-app.sh"
+    "voice|yes|vendor/jarvisos/tests/emulator/voice.sh"
+    "tictactoe-quick|yes|vendor/jarvisos/tests/emulator/tictactoe.sh --quick"
+    "tictactoe|yes|vendor/jarvisos/tests/emulator/tictactoe.sh"
+)
+# Groups: `jh test fast` before a commit, `jh test all` before a push.
+expand_suites() {
+    for s in "$@"; do case "$s" in
+        fast) echo host history jarvis-app tictactoe-quick ;;
+        device) echo app-tools jarvis-app voice tictactoe-quick ;;
+        all) echo host history app-tools jarvis-app voice tictactoe ;;
+        *) echo "$s" ;;
+    esac; done
+}
+
+suite_line() { for s in "${SUITES[@]}"; do [ "${s%%|*}" = "$1" ] && { echo "$s"; return; }; done; }
+
+# Runs one suite, writes its log and a JSON result, prints a short verdict and,
+# on failure, the failing checks and what Jarvis logged meanwhile.
+run_suite() {
+    local name=$1 line device cmd log json t0 rc secs counts
+    line=$(suite_line "$name") || true
+    [ -n "$line" ] || { echo "  unknown suite '$name' (jh test list)"; return 1; }
+    device=$(echo "$line" | cut -d'|' -f2); cmd=$(echo "$line" | cut -d'|' -f3)
+    log="$RUNS/$(stamp)-$name.log"; json="${log%.log}.json"
+    if [ "$device" = yes ]; then
+        [ -e "$WATCHING" ] && { echo "  SKIP  $name: Kevin is watching the emulator"; return 1; }
+        booted || { echo "  SKIP  $name: emulator not running (jh emu up)"; return 1; }
+    fi
+    local since; since=$(ash date '+%m-%d %H:%M:%S.000' 2>/dev/null)
+    t0=$(date +%s)
+    if [ "$device" = yes ]; then
+        ( flock -w 1800 9 || exit 99; exec $cmd ) 9>"$EMU_LOCK" > "$log" 2>&1
+    else
+        $cmd > "$log" 2>&1
+    fi
+    rc=$?; secs=$(( $(date +%s) - t0 ))
+    # Suites end with "N checks, M failed", "N tests, M failed", "N passed, M failed" or similar.
+    counts=$(grep -aoE '[0-9]+ (checks|tests|passed)(, [0-9]+ failed)?' "$log" | tail -1)
+    python3 - "$json" "$name" "$rc" "$secs" "$log" "$counts" <<'PY'
+import json, re, sys
+path, name, rc, secs, log, counts = sys.argv[1:]
+m = re.match(r'(\d+) \w+(?:, (\d+) failed)?', counts)
+total, failed = (int(m.group(1)), int(m.group(2) or 0)) if m else (None, None)
+json.dump({"suite": name, "ok": rc == "0", "exit": int(rc), "seconds": int(secs),
+           "checks": total, "failed": failed, "log": log}, open(path, "w"), indent=1)
+PY
+    if [ $rc = 0 ]; then
+        printf "  pass  %-16s %-22s %4ss\n" "$name" "${counts:-exit 0}" "$secs"
+        return 0
+    fi
+    [ $rc = 99 ] && { echo "  FAIL  $name: emulator lock busy for 30 min"; return 1; }
+    printf "  FAIL  %-16s %-22s %4ss  %s\n" "$name" "${counts:-exit $rc}" "$secs" "$log"
+    grep -aE -A2 '^\s*FAIL\b' "$log" | head -30 | sed 's/^/        /'
+    grep -aqE '^\s*FAIL\b' "$log" || tail -15 "$log" | sed 's/^/        /'
+    if [ "$device" = yes ] && [ -n "$since" ]; then
+        echo "        -- Jarvis log during the run (errors and warnings) --"
+        "$ADB" logcat -d -T "$since" '*:W' 2>/dev/null | tr -d '\r' \
+            | grep -iE 'jarvis|cactus|llama|needle|session|AndroidRuntime|FATAL' | cut -c1-240 | tail -20 | sed 's/^/        /'
+    fi
+    return 1
+}
+
+cmd_test() {
+    [ $# = 0 ] && set -- fast
+    if [ "$1" = list ]; then
+        for s in "${SUITES[@]}"; do IFS='|' read -r n d c <<< "$s"; printf "  %-16s emulator=%-3s %s\n" "$n" "$d" "$c"; done
+        echo "  groups: fast = host history jarvis-app tictactoe-quick; device = app-tools jarvis-app voice tictactoe-quick; all = everything, full tictactoe"
+        ok "suites listed"
+    fi
+    local suites passed=0 failed=()
+    suites=$(expand_suites "$@")
+    note "suites: $suites"
+    for s in $suites; do
+        if run_suite "$s"; then passed=$((passed+1)); else failed+=("$s"); fi
+    done
+    [ ${#failed[@]} = 0 ] && ok "$passed suite(s) passed"
+    fail "${#failed[@]} suite(s) failed: ${failed[*]} ($passed passed)"
+}
+
+# ---------------------------------------------------------------- cycle
+
+# The inner loop: build, put it on the emulator, test. Stops at the first step that fails.
+cmd_cycle() {
+    local kind=$1; shift
+    case "$kind" in
+        app)   local app=$1; shift; [ -n "$app" ] || fail "usage: jh cycle app NAME [SUITE...]"
+               "$0" build app "$app" --wait || exit 1
+               "$0" deploy "$app" || exit 1 ;;
+        image) "$0" build image --wait || exit 1
+               "$0" emu restart || exit 1 ;;
+        *)     fail "usage: jh cycle app NAME [SUITE...] | jh cycle image [SUITE...]" ;;
+    esac
+    "$0" test "${@:-fast}"
+}
+
+# ---------------------------------------------------------------- inspect
+
+cmd_logs() {
+    local minutes=${1:-10} since
+    booted || fail "emulator not running"
+    since=$(ash date -d "@$(( $(ash date +%s) - minutes*60 ))" '+%m-%d %H:%M:%S.000' 2>/dev/null)
+    echo "== Jarvis, last $minutes min"
+    "$ADB" logcat -d ${since:+-T "$since"} 2>/dev/null | tr -d '\r' \
+        | grep -iE 'jarvis|objectbox|cactus|llama|needle|whistle|ToolScanner|ToolDispatcher|DreamWorker|Session' \
+        | grep -v 'service call' | cut -c1-300 | tail -80
+    echo "== crashes"; "$ADB" logcat -d -b crash 2>/dev/null | tr -d '\r' | cut -c1-300 | tail -30
+    echo "== SELinux denials (system_server / jarvis)"
+    "$ADB" logcat -d 2>/dev/null | grep 'avc: ' | grep -iE 'system_server|jarvis' | cut -c1-300 | sort | uniq -c | sort -rn | head -15
+    ok "logs"
+}
+
+cmd_q() {
+    [ -n "$*" ] || fail "usage: jh q TEXT"
+    booted || fail "emulator not running"
+    local t0=$(date +%s)
+    ash cmd jarvis query "\"$*\""
+    ok "answered in $(( $(date +%s) - t0 )) s"
+}
+
+cmd_watch() {
+    case "$1" in
+        on)  date '+%d %b %H:%M' > "$WATCHING"; ok "watching: device tests, taps and restarts are blocked" ;;
+        off) rm -f "$WATCHING"; ok "not watching" ;;
+        *)   [ -e "$WATCHING" ] && ok "watching since $(cat "$WATCHING")"; ok "not watching" ;;
+    esac
+}
+
+cmd_install() {
+    mkdir -p ~/bin "$TOP/.claude/skills"
+    ln -sfn "$HARNESS/jh" ~/bin/jh
+    ln -sfn "$HARNESS/claude-settings.json" "$TOP/.claude/settings.json"
+    ln -sfn "$HARNESS/skill" "$TOP/.claude/skills/jarvis-harness"
+    chmod +x "$HARNESS/jh" "$HARNESS/hooks/"*.py
+    ok "jh on PATH (~/bin/jh), hooks in $TOP/.claude/settings.json, skill jarvis-harness"
+}
+
+case "$1" in
+    status)  shift; cmd_status "$@" ;;
+    build)   shift; cmd_build "$@" ;;
+    emu)     shift; cmd_emu "$@" ;;
+    models)  cmd_models ;;
+    deploy)  shift; cmd_deploy "$@" ;;
+    test)    shift; cmd_test "$@" ;;
+    cycle)   shift; cmd_cycle "$@" ;;
+    logs)    shift; cmd_logs "$@" ;;
+    q)       shift; cmd_q "$@" ;;
+    trace)   ash cmd jarvis session; ok "trace" ;;
+    watch)   shift; cmd_watch "$@" ;;
+    install) cmd_install ;;
+    *)       sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

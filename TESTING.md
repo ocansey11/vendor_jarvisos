@@ -11,6 +11,17 @@ which layer a claim rests on.
 | 3 | Emulator boot | Android emulator on the build server (`lineage_sdk_phone_x86_64`) | The ROM boots with the service in it; `system_server` survives; the binder services register; the store opens under SELinux; tool definitions load | Inference (Cactus is arm64-only and is absent on x86_64); anything hardware-specific |
 | 4 | Phone | Nothing Phone 2 (`Pong`) | Everything, including inference with real models | — |
 
+## The harness: `jh`
+
+`vendor/jarvisos/harness/jh` wraps everything below into one command
+(`jh install` puts it on PATH and wires the Claude Code hooks and skill):
+`jh status`, `jh build image|check|app NAME|rom`, `jh emu up|down|restart`,
+`jh test fast|all|SUITE`, `jh cycle`, `jh logs`, `jh q`, `jh trace`,
+`jh watch on|off`. Results and logs of every run are kept in `~/.jh/runs/`.
+`harness/skill/SKILL.md` explains the loop; `harness/hooks/guard.py` holds the
+rules agents may not break (pushes, `lunch`, `pkill qemu`, taps while Kevin is
+watching). The scripts below still work on their own.
+
 ## Running the host tests (layers 1 and 2)
 
 ```bash
