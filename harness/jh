@@ -164,8 +164,14 @@ ensure_models() {
         note "installing $1 model ($(basename "$2"))"
         "$ADB" shell -T cmd jarvis install-model "$1" < "$2" 2>&1 | tr -d '\r' | tail -1
     }
-    [[ "$s" == *"model primary: ready"* ]]      || install chat    "$MODELS/Qwen3-1.7B-Q8_0.gguf"
-    [[ "$s" == *"model rag: ready"* ]]          || install embed   "$MODELS/all-MiniLM-L6-v2-Q8_0.gguf"
+    # The chat and embed files are GGUF, for llama.cpp. Another engine
+    # (cactus) takes its own bundles, installed by hand; never put a GGUF there.
+    if [[ "$s" == *"engine: llama"* ]]; then
+        [[ "$s" == *"model primary: ready"* ]]  || install chat    "$MODELS/Qwen3-1.7B-Q8_0.gguf"
+        [[ "$s" == *"model rag: ready"* ]]      || install embed   "$MODELS/all-MiniLM-L6-v2-Q8_0.gguf"
+    else
+        note "engine is not llama; chat/embed models left as they are"
+    fi
     [[ "$s" == *"needle: tool calling ready"* ]] || install needle "$MODELS/needle/needle3.cact"
     [[ "$s" == *"speech ready"* ]]              || install whistle "$MODELS/needle/whistle.cact"
 }

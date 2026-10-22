@@ -58,6 +58,7 @@ notes; entries 7 onward were written as they happened.
 47. There was no way to install a Cactus model (found for the phone)
 48. "auto" would pick an engine with no model (open, phone)
 49. Smaller ones from the Cactus day
+50. Cactus had never been given a tool
 
 ---
 
@@ -1364,8 +1365,12 @@ notes; entries 7 onward were written as they happened.
   programs, built for x86 through SIMDe: every correctness check passes;
   `test_matmul` and `test_nn` ran into the 10-minute limit in their benchmark
   sections, after all their checks had passed) and ROM builds (`libcactus.so`
-  for the emulator: 3.2 MB, 10 JNI entry points, no network imports).
-  Emulator: image building at the time of writing.
+  for the emulator: 3.2 MB, 10 JNI entry points, no network imports) and
+  **emulator** (22 Oct, 23:45 CEST): `libcactus.so` loads in `system_server`,
+  Gemma 4 E2B CQ4 loads in 1.4 s, answers a question in 15 s and, after
+  entry 50, turns on the torch through a tool call (camera service: "Torch
+  for camera id 0 turned on"). That call took 8 min 56 s: translated NEON
+  and a prompt with 20 tools. Speed means nothing here.
 - **For the talk:** the emulator can only prove the Cactus path is correct.
   Translated NEON is slow, so speed questions wait for the phone. Say so.
 
@@ -1496,7 +1501,9 @@ notes; entries 7 onward were written as they happened.
   `installBundle` drops the zip's top folder, refuses entries that would land
   outside the bundle folder, and swaps the new bundle in only once it is
   complete.
-- **Proven to:** written; image building at the time of writing.
+- **Proven to:** emulator: the 2.7 GB zip went in through
+  `adb shell -T cmd jarvis install-model chat < gemma-4-e2b-it-cq4.zip` in
+  77 s and Cactus loaded it ("model primary: ready").
 - **For the talk:** a feature counted as "supported" because the engine class
   existed, but it had never had a model to load.
 
@@ -1512,7 +1519,16 @@ notes; entries 7 onward were written as they happened.
 - **Emulator fix (written):** `InferenceEngine.suitsAuto()`. Cactus answers
   false on x86, so the emulator stays on llama unless Cactus is asked for by
   name.
-- **Phone fix:** open. `auto` should prefer an engine that has a model.
+- **Phone fix (written the same evening, not yet run anywhere):** `auto`
+  first takes an engine that can run and has a chat model installed, then
+  one that can only run:
+
+  ```java
+  if (engine.suitsAuto() && new java.io.File(engine.modelPath("chat")).exists()) {
+  ```
+
+  The emulator cannot exercise it (Cactus is never `auto` there), so it
+  waits for the phone.
 - **For the talk:** a default that was right with one engine became wrong
   the day there were two.
 
@@ -1538,3 +1554,50 @@ notes; entries 7 onward were written as they happened.
 - **"Failed" tests that had passed.** The x86 kernel tests reported
   `test_matmul` and `test_nn` as failed (exit 124). Every check had passed;
   the 10-minute limit hit in the benchmark sections that run afterwards.
+
+## 50. Cactus had never been given a tool
+
+- **When:** 22 Oct 2026, 23:47 CEST, the first tool request to Gemma 4 on
+  Cactus (emulator).
+- **Expected:** "turn on the flashlight" → a `set_flashlight` call, as on
+  llama.cpp.
+- **What happened:** it answered in prose, as if it had no tools:
+
+  ```
+  As a large language model, I do not have the ability to control physical devices or access hardware like a flashlight.
+  ```
+
+- **Cause:** Cactus's tool parser (`parse_tools_json` in
+  `cactus-engine/src/utils.h`) is hand-written string search. It finds each
+  tool by looking for the key `"function"`:
+
+  ```cpp
+  pos = json.find("\"function\"", pos);
+  ```
+
+  JarvisOS sends bare definitions (`{"name":..., "parameters":...}`), so
+  Cactus skipped every one. llama.cpp's JNI accepted both shapes, so in five
+  weeks nothing noticed. On the phone, Cactus would never have called a
+  single tool.
+- **Before** (`inference/CactusEngine.java`):
+
+  ```java
+  return CactusWrapper.complete(modelHandle, messagesJson, null, toolsJson);
+  ```
+
+- **After:**
+
+  ```java
+  return CactusWrapper.complete(modelHandle, messagesJson, null, openAiTools(toolsJson));
+  ```
+
+  `openAiTools` wraps each bare definition as
+  `{"type":"function","function":{...}}`. The fix is in `CactusEngine`, the
+  boundary for Cactus's habits (seam 2 of the Cactus skill), not in the
+  tool code all engines share.
+- **Proven to:** unit tests (`CactusEngineTest`, 3) and emulator (the torch
+  turned on through Cactus; entry 42).
+- **For the talk:** the most valuable thing the emulator port did. It was
+  built to answer "does Cactus run?" and found that Cactus had never been
+  given a tool. Two engines that accept "OpenAI-style" input still disagree
+  on what that means.
