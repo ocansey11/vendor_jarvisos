@@ -49,6 +49,15 @@ notes; entries 7 onward were written as they happened.
 38. The tool did the maths; the model misread it (open)
 39. Half an emoji stopped the test
 40. Smaller ones from the tic-tac-toe day
+41. The rules lived in notes, not in the tools (the harness)
+42. Cactus could not run on the test phone at all
+43. `__fp16` is not a real number on x86
+44. Translated code that broke on two ordinary C++ habits
+45. The server test could not see an Android-only header
+46. A warning became a link error
+47. There was no way to install a Cactus model (found for the phone)
+48. "auto" would pick an engine with no model (open, phone)
+49. Smaller ones from the Cactus day
 
 ---
 
@@ -1254,3 +1263,278 @@ notes; entries 7 onward were written as they happened.
   said anything. With the prompt cached it costs a few seconds, after the
   move is already on the board.
 
+
+
+## 41. The rules lived in notes, not in the tools (the harness)
+
+- **When:** 22 Oct 2026, 11:00–13:20 CEST. Kevin had seen people doing
+  "harness engineering" around Opus to reverse-engineer apps and asked for one
+  for JarvisOS ("write it well, run it in tmux").
+- **Expected:** the edit → build → boot → test loop was already scripted.
+- **What was there instead:** eight scripts in `tests/emulator/`, three in
+  `~`, and rules kept only in Claude's memory notes, each one learned from an
+  incident: never `lunch` (a 4-minute build became a full 62k-step one,
+  17 Oct), never `pkill -f qemu` (it kills the shell that runs it, 5 Oct),
+  never tap the emulator while Kevin watches on scrcpy (the game looked like
+  it played itself, 17 Oct), never `ln` a ROM zip (a backup was overwritten,
+  2 Oct), never push without Kevin. A session that did not read the notes
+  could break every one of them.
+- **Cause:** a rule in a note depends on someone reading it. Nothing in the
+  tools enforced it.
+- **Before** (memory note `jarvisos-agent-experience.md`):
+
+  ```
+  It went full because Claude once used `lunch lineage_sdk_phone_x86_64-ap4a-userdebug`
+  instead of the scripts' `breakfast sdk_phone_x86_64 userdebug`; always use breakfast.
+  ```
+
+- **After** (`harness/hooks/guard.py`, a Claude Code hook that runs before
+  every shell command Claude sends):
+
+  ```python
+  (CMD + r"lunch\b",
+   "deny",
+   "Use `breakfast sdk_phone_x86_64 userdebug` (or `jh build`), never `lunch`: "
+   "on 17 Oct 2026 `lunch lineage_sdk_phone_x86_64-...` turned a 4-minute build into a full 62k-step one."),
+  ```
+
+  Plus `jh`, one command for the loop (`jh build`, `jh emu restart`,
+  `jh test fast`, `jh logs`, `jh watch on`). Every command ends in one line,
+  `jh: OK ...` or `jh: FAIL ...`, with logs and JSON in `~/.jh/runs/`.
+- **Proven to:** server (`hooks/test_guard.py`, 38 checks) and emulator
+  (`jh test fast`, 4/4 suites: host 88, history 46, jarvis-app 19,
+  tic-tac-toe quick 32).
+- **Commit:** vendor_jarvisos `4ce9195`.
+- **For the talk:** the agent did not need to get smarter. It needed tools
+  that say no, and an answer it can read in one line.
+
+## 42. Cactus could not run on the test phone at all
+
+- **When:** 22 Oct 2026, 11:00 CEST.
+- **Expected:** Kevin asked what it would take to run Cactus on the emulator.
+- **What was there:** the emulator is x86_64. Cactus's maths code
+  (`cactus-kernels`, about 65,000 lines across kernels, graph and engine) is
+  written directly in ARM NEON intrinsics: 233 different ones in 17 files,
+  with no plain C fallback. Upstream's CMake refuses any ABI but arm64, and
+  our `Android.bp` copied that. So since 2 Oct the emulator had run Jarvis
+  only on llama.cpp; the Cactus engine class had never run anywhere.
+- **Options weighed:** an arm64 emulator on this x86 server (no longer
+  supported for system images); an ARM cloud server (needs KVM on ARM
+  hardware, costs money); `qemu-user` on the server (tests the library, not
+  the service); or translate NEON to x86. Chosen: translate with SIMDe
+  (header-only, MIT), so Cactus's code compiles unchanged.
+- **Before** (`vendor/cactus/Android.bp`):
+
+  ```
+  // arm64 only, like upstream (its CMake FATAL_ERRORs on any other ABI).
+  ...
+  arch: {
+      arm64: {
+          enabled: true,
+      },
+  },
+  ```
+
+- **After:**
+
+  ```
+  arch: {
+      arm64: {
+          enabled: true,
+          cflags: ["-march=armv8.2-a+fp16+simd+dotprod+i8mm"],
+      },
+      x86_64: {
+          enabled: true,
+          local_include_dirs: ["jarvisos/x86"],
+          ...
+  ```
+
+  and `jarvisos/x86/arm_neon.h`, which stands in for the compiler's header
+  on x86 only:
+
+  ```c
+  #define SIMDE_ENABLE_NATIVE_ALIASES
+  #include "simde/arm/neon.h"
+  #include "neon_aliases.h"
+  ```
+
+- **What it changes on the phone:** nothing. The x86 files are only on the
+  x86 include path, and the arm64 flags are the same as before.
+- **Proven to:** server tests (Cactus's own 16 kernel and graph test
+  programs, built for x86 through SIMDe: every correctness check passes;
+  `test_matmul` and `test_nn` ran into the 10-minute limit in their benchmark
+  sections, after all their checks had passed) and ROM builds (`libcactus.so`
+  for the emulator: 3.2 MB, 10 JNI entry points, no network imports).
+  Emulator: image building at the time of writing.
+- **For the talk:** the emulator can only prove the Cactus path is correct.
+  Translated NEON is slow, so speed questions wait for the phone. Say so.
+
+## 43. `__fp16` is not a real number on x86
+
+- **When:** 22 Oct 2026, 13:25 CEST, first compile through SIMDe.
+- **What happened:** hundreds of errors in the first file:
+
+  ```
+  cactus_kernels.h:119:8: error: function return value cannot have __fp16 type; did you forget * ?
+  scalar.cpp:16:37: error: parameters cannot have __fp16 type; did you forget * ?
+  ```
+
+- **Cause:** on ARM, `__fp16` is a full half-precision number. On x86, clang
+  allows it only as a storage format (in memory, never passed or returned).
+  Cactus passes it by value everywhere. `_Float16` is the C standard type
+  that x86 clang treats as a number, and SIMDe already uses it.
+- **Fix** (x86_64 cflags only): `-D__fp16=_Float16 -Wno-keyword-macro`.
+- **Proven to:** server tests (entry 42).
+- **For the talk:** the same word, `__fp16`, meant two different things on
+  two chips.
+
+## 44. Translated code that broke on two ordinary C++ habits
+
+- **When:** 22 Oct 2026, 13:30 CEST.
+- **What happened:** after entry 43, five files still failed:
+
+  ```
+  matmul.cpp:2870:25: error: too many arguments provided to function-like macro invocation
+   2870 |         (int8x8_t){0,-2,-4,-6, 0,-2,-4,-6},
+  neon.h:12211:11: note: macro 'vcombine_s8' defined here
+  scalar.cpp: error: use of undeclared identifier 'vsqrtq_f32'
+  ```
+
+- **Cause:** SIMDe gives each NEON name as a function-like macro,
+  `#define vcombine_s8(low, high) simde_vcombine_s8((low), (high))`. Two
+  ordinary C++ habits break that: the commas inside a vector literal split it
+  into too many macro arguments, and passing an intrinsic as a value
+  (`apply_f32_op_on_f16x8(v, vsqrtq_f32)`) has no parentheses, so the macro
+  never expands.
+- **Before** (Cactus, `scalar.cpp`, left unchanged):
+
+  ```cpp
+  [](float16x8_t v) { return apply_f32_op_on_f16x8(v, vsqrtq_f32); },
+  ```
+
+- **After:** Cactus's code is untouched. A generated header,
+  `jarvisos/x86/neon_aliases.h`, replaces all 4,117 SIMDe aliases with plain
+  names:
+
+  ```c
+  #undef vsqrtq_f32
+  #define vsqrtq_f32 simde_vsqrtq_f32
+  ```
+
+- **Proven to:** compiles (all 56 sources), server tests (entry 42).
+- **Commit:** cactus `530516c`.
+- **For the talk:** fix it where you own the code. Patching 17 upstream
+  files would have to be redone at every Cactus release.
+
+## 45. The server test could not see an Android-only header
+
+- **When:** 22 Oct 2026, 22:35 CEST, first Soong build of `libcactus` for x86.
+- **What happened:**
+
+  ```
+  vendor/cactus/cactus-kernels/src/threading.h:11:10: fatal error: 'asm/hwcap.h' file not found
+  ```
+
+- **How it was missed:** the server-side test built for Linux, not Android.
+  The include sits under `#if defined(__ANDROID__)`, so only the real
+  Android build reached it.
+- **Cause:** `<asm/hwcap.h>` is an arm64 kernel header. Cactus includes it on
+  every Android build, but only uses it inside its `__aarch64__` branch.
+- **After:** an empty `jarvisos/x86/asm/hwcap.h` on the x86 include path.
+- **Proven to:** ROM builds.
+- **For the talk:** a test that is not the real build tests less than you
+  think. Each test layer here missed something the next one caught.
+
+## 46. A warning became a link error
+
+- **When:** 22 Oct 2026, 22:38 CEST, the next build.
+- **What happened:** everything compiled; the link failed:
+
+  ```
+  ld.lld: error: vendor/cactus/jarvisos/x86/simde/arm/neon.h:74992:5: loop not vectorized:
+  the optimizer was unable to perform the requested transformation
+  ```
+
+- **Cause:** SIMDe marks its fallback loops "please vectorize"
+  (`#pragma clang loop vectorize(enable)`). When the optimizer cannot, it
+  emits a remark. Android links with ThinLTO (it optimizes again at link
+  time) and `-Wl,--fatal-warnings`, so the remark became an error at link
+  time.
+- **After** (x86_64 block only): `lto: { never: true }`.
+- **Proven to:** ROM builds (`libcactus.so` for the emulator).
+- **For the talk:** the platform's strict defaults are there for good
+  reasons. Switch them off narrowly (one library, one architecture) and write
+  down why.
+
+## 47. There was no way to install a Cactus model (found for the phone)
+
+- **When:** 22 Oct 2026, 22:45 CEST, getting ready to load Gemma 4 on Cactus.
+- **What we found:** `cmd jarvis install-model` stores what it reads on
+  standard input as one file. Cactus v2 loads a folder (a "bundle":
+  `config.txt` plus about 2,000 weight files; the Gemma 4 E2B CQ4 zip is
+  2.4 GB, 4 GB unpacked). So on phone day, with the old command, Cactus would
+  have had no model at all.
+- **How it was found:** not by a test, but by reading the code to plan the
+  emulator test. The emulator work found a phone problem before the phone
+  arrived.
+- **Before** (`JarvisService.java`):
+
+  ```java
+  if (bytes == 0 || !tmp.renameTo(target)) {
+  ```
+
+- **After:**
+
+  ```java
+  if (!small && isZip(tmp)) {
+      // A Cactus bundle: a zipped folder with config.txt, unpacked
+      // so that target is the folder itself.
+      try {
+          installBundle(tmp, target);
+  ```
+
+  `installBundle` drops the zip's top folder, refuses entries that would land
+  outside the bundle folder, and swaps the new bundle in only once it is
+  complete.
+- **Proven to:** written; image building at the time of writing.
+- **For the talk:** a feature counted as "supported" because the engine class
+  existed, but it had never had a model to load.
+
+## 48. "auto" would pick an engine with no model (open, phone)
+
+- **When:** 22 Oct 2026, 22:50 CEST.
+- **What we found:** `persist.sys.jarvis.engine` defaults to `auto`, and
+  `auto` takes Cactus whenever `libcactus.so` loads, whether or not a Cactus
+  model is installed. On the emulator this was about to switch Jarvis away
+  from its working llama model the moment the new library arrived. On the
+  phone, someone who installs only the GGUF would get an engine with nothing
+  to answer with.
+- **Emulator fix (written):** `InferenceEngine.suitsAuto()`. Cactus answers
+  false on x86, so the emulator stays on llama unless Cactus is asked for by
+  name.
+- **Phone fix:** open. `auto` should prefer an engine that has a model.
+- **For the talk:** a default that was right with one engine became wrong
+  the day there were two.
+
+## 49. Smaller ones from the Cactus day
+
+- **The harness blocked its own author.** Writing these notes, Claude's
+  command contained the text of the `lunch` rule, and the new hook refused
+  it: the rule looked for the word anywhere, not where a command starts.
+  Fixed: every rule now anchors on a command position, and
+  `hooks/test_guard.py` (38 checks) includes text that only mentions
+  `lunch`, `pkill` and `git push`. A guard that fires on words, not actions,
+  gets switched off; this one needed to be precise.
+- **`pkill -f` killed Claude's own shell, a third time.** To clear an old
+  test run, Claude ran `pkill -f 'jarvisos/x86/host-test.sh'` in a command
+  line that contained the same path; the shell matched and died (exit 144).
+  The commit before it had already gone through. Same trap as 5 Oct and
+  17 Oct.
+- **The harness reported the wrong build.** `jh build wait` picked the
+  newest summary file, but each build deletes its own summary when it
+  starts, so it found the Pong ROM summary of 2 Oct and said "OK" for a build
+  that had failed. Fixed: `jh build` writes down which summary to wait for.
+  The harness's first real job found a bug in the harness.
+- **"Failed" tests that had passed.** The x86 kernel tests reported
+  `test_matmul` and `test_nn` as failed (exit 124). Every check had passed;
+  the 10-minute limit hit in the benchmark sections that run afterwards.

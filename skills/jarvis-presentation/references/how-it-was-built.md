@@ -297,3 +297,31 @@ register tools). Both are open decisions for Kevin.
 | 20:24 | Calls only, cache reuse: 34 of 34, turns 11 to 22 s |
 | 20:51 | With the closing line and "best": draws with the tool, a loss without |
 | 21:05 | Quick checks 24 of 24 after a fresh boot; old suites pass |
+
+## 22 Oct 2026: a harness, and Cactus on the emulator
+
+- **Kevin** saw people building harnesses around Opus to reverse-engineer
+  apps and asked for one for JarvisOS: "write it well, run it in tmux". He
+  then asked what it would take to run Cactus on the emulator and, after
+  hearing that it proves correctness only (the speed question waits for the
+  phone) and that it means a second copy of Gemma 4 on disk ("its just
+  testing"), said "go ahead". He asked that the day be kept as talk material:
+  why testing was hard, what the tests exposed, and the AX tool fence.
+- **Claude** built `jh` (one command for build, boot, models, tests, logs,
+  with a one-line verdict and logs per run), a Claude Code hook that enforces
+  the rules from earlier incidents, and a skill that explains the loop. It
+  then ported Cactus to x86_64 by translating its NEON code with SIMDe:
+  a shim header, a generated alias list, an empty `asm/hwcap.h`, no LTO for
+  the x86 build; a server-side runner for Cactus's own kernel tests; a
+  `libcactus.so` for the emulator; `install-model` support for Cactus
+  bundles; and `auto` kept off Cactus on x86. Kevin was at work for most of
+  it.
+- **What Claude got wrong:** `pkill -f` with its own path in the command
+  line killed its shell (third time on this project); `jh build wait` read
+  the wrong summary and reported a failed build as OK; the first hook rules
+  matched words, so they blocked Claude's own notes about the rules. All
+  three found the same day, the last two fixed with a test.
+- **Where it stands at 23:00 CEST:** Cactus's kernel tests pass on x86;
+  `libcactus.so` builds for the emulator; the emulator image is building.
+  Not yet seen: Cactus loading a model or answering on the emulator. Nothing
+  on a phone.

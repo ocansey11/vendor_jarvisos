@@ -110,7 +110,7 @@ cmd_build() {
     local wait=0 args=() summary=~/build-jarvis-emu.summary script targets=()
     for a in "$@"; do [ "$a" = --wait ] && wait=1 || args+=("$a"); done
     case "${args[0]:-image}" in
-        wait) build_wait "$(ls -t ~/build-jarvis-emu.summary ~/build-jarvis-full.summary 2>/dev/null | head -1)" ;;
+        wait) build_wait "$(cat "$STATE/build-summary" 2>/dev/null || echo ~/build-jarvis-emu.summary)" ;;
         log)  exec tail -n 40 -f "$(ls -t ~/build-jarvis-emu-*.log ~/build-jarvis-full-*.log | head -1)" ;;
         image) script="$EMU_SCRIPTS/build.sh" ;;
         check) script="$EMU_SCRIPTS/build.sh"; targets=(services.jarvis) ;;
@@ -121,7 +121,8 @@ cmd_build() {
         *)    fail "unknown build '${args[0]}' (image, check, app NAME, rom, -- TARGETS...)" ;;
     esac
     have_session build && fail "a build is already running in tmux 'build' (jh build wait)"
-    local mark="$STATE/build-start"; touch "$mark"; rm -f "$summary"
+    # Remember which summary this build writes, for `jh build wait`.
+    rm -f "$summary"; echo "$summary" > "$STATE/build-summary"
     # Builds slow the emulator to a crawl; run them at low priority when it is up.
     local nice=0; "$ADB" devices 2>/dev/null | grep -q 'emulator-.*device$' && nice=19
     tmux new -d -s build "nice -n $nice $script ${targets[*]}"
@@ -196,6 +197,7 @@ cmd_deploy() {
 # name | needs emulator? | command (relative to the tree)
 SUITES=(
     "host|no|vendor/jarvisos/tests/run-all.sh"
+    "guard|no|python3 vendor/jarvisos/harness/hooks/test_guard.py"
     "history|no|frameworks/base/services/jarvis/objectbox/history-test.sh"
     "check|yes|vendor/jarvisos/tests/emulator/check.sh"
     "app-tools|yes|vendor/jarvisos/tests/emulator/app-tools.sh"
@@ -207,9 +209,9 @@ SUITES=(
 # Groups: `jh test fast` before a commit, `jh test all` before a push.
 expand_suites() {
     for s in "$@"; do case "$s" in
-        fast) echo host history jarvis-app tictactoe-quick ;;
+        fast) echo host history guard jarvis-app tictactoe-quick ;;
         device) echo app-tools jarvis-app voice tictactoe-quick ;;
-        all) echo host history app-tools jarvis-app voice tictactoe ;;
+        all) echo host history guard app-tools jarvis-app voice tictactoe ;;
         *) echo "$s" ;;
     esac; done
 }
@@ -266,7 +268,7 @@ cmd_test() {
     [ $# = 0 ] && set -- fast
     if [ "$1" = list ]; then
         for s in "${SUITES[@]}"; do IFS='|' read -r n d c <<< "$s"; printf "  %-16s emulator=%-3s %s\n" "$n" "$d" "$c"; done
-        echo "  groups: fast = host history jarvis-app tictactoe-quick; device = app-tools jarvis-app voice tictactoe-quick; all = everything, full tictactoe"
+        echo "  groups: fast = host history guard jarvis-app tictactoe-quick; device = app-tools jarvis-app voice tictactoe-quick; all = everything, full tictactoe"
         ok "suites listed"
     fi
     local suites passed=0 failed=()

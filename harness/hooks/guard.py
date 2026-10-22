@@ -12,25 +12,30 @@ import sys
 
 WATCHING = os.path.expanduser("~/.jh/watching")
 
+# Where a command starts: the line start, or after ; & | && || ( or "then"/"do".
+# Rules anchor on it so that a word inside text (a heredoc, a commit message,
+# a note about `lunch`) is not mistaken for running it.
+CMD = r"(?:^|[;&|(\n]\s*|\b(?:then|do|sudo|nice(?:\s+-n\s*-?\d+)?|time)\s+)"
+
 # (pattern, decision, reason)
 RULES = [
-    (r"\blunch\b",
+    (CMD + r"lunch\b",
      "deny",
      "Use `breakfast sdk_phone_x86_64 userdebug` (or `jh build`), never `lunch`: "
      "on 17 Oct 2026 `lunch lineage_sdk_phone_x86_64-...` turned a 4-minute build into a full 62k-step one."),
-    (r"\b(pkill|killall)\b[^;&|]*(qemu|emulator)",
+    (CMD + r"(pkill|killall)\b[^;&|\n]*(qemu|emulator)",
      "deny",
      "Stop the emulator with `jh emu down` (adb emu kill). `pkill -f qemu` matches the calling shell and kills it."),
-    (r"\btmux\b[^;&|]*(kill-session|kill-server|new(-session)?)\b[^;&|]*-[st]\s*jarvis\b|\btmux\s+kill-server\b",
+    (CMD + r"tmux\b[^;&|\n]*(kill-session|new(-session)?)\b[^;&|\n]*-[st]\s*jarvis\b|" + CMD + r"tmux\s+kill-server\b",
      "deny",
      "tmux session `jarvis` is where Kevin runs Claude; leave it alone. Builds go in `build`, the emulator in `emu`."),
-    (r"\bln\b[^;&|]*(artifacts|lineage-[^ ]*\.zip)",
+    (CMD + r"ln\b[^;&|\n]*(artifacts|lineage-[^ ]*\.zip)",
      "deny",
      "Back up ROM zips with `cp`, never `ln`: the 20 Sep vanilla backup was a hard link and the next build overwrote it."),
-    (r"\brm\b[^;&|]*(~|/root)/artifacts",
+    (CMD + r"rm\b[^;&|\n]*(~|/root)/artifacts",
      "ask",
      "This deletes something in ~/artifacts (ROM zips). Kevin decides which zips go."),
-    (r"\bgit\b[^;&|]*\bpush\b",
+    (CMD + r"git\b[^;&|\n]*\spush\b",
      "ask",
      "Kevin decides every push. Ask him in chat before pushing."),
 ]
