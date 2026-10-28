@@ -45,7 +45,7 @@ Pong re-runs Soong analysis each time, so don't alternate casually.
   two device suites never run at once.
 
 A failing suite prints its FAIL lines and Jarvis's warnings from logcat during
-the run. Full output and a JSON result per run are in `~/.jh/runs/`.
+the run. Full output and a JSON result per run are in `/srv/jarvis/state/runs/`.
 
 ## Looking inside
 
@@ -56,6 +56,25 @@ the run. Full output and a JSON result per run are in `~/.jh/runs/`.
 - `adb shell cmd jarvis ...` for everything else (`status`, `tools`, `tool NAME 'JSON'`,
   `engine`, `history`, `dream`, `session`). The shell cannot use the Binder methods
   directly; that is deliberate (signature permission).
+
+## A shared server
+
+Kevin, Sam and Desmond (group `jarvis`) share one tree, one `out/` and one
+emulator. Everything shared lives in `/srv/jarvis`: `state/` (locks, the
+watching flag, test runs), `logs/` (build and emulator logs and summaries),
+`models/` (read-only test models), `ccache/`.
+
+- One build at a time: `jh build` refuses while anyone's build holds the lock
+  and says whose it is; `jh build wait` waits for it, whoever started it.
+- One emulator: `jh emu up` uses the one that is running or starting. Before
+  `jh emu restart`, `down` or `--wipe`, check `jh status`: someone may be using it.
+- `jh status` checks GitHub over https, so it works without a GitHub key.
+
+## Reading lists
+
+`jh read` shows them, `jh read NAME` lists one, `jh read NAME N` opens file N.
+When you build a new app or change a feature across files, add or update one
+in `harness/reading/` (rules in `harness/CLAUDE.md`) and run `jh read --check`.
 
 ## Rules (enforced by the hook, so a denial is not a bug)
 

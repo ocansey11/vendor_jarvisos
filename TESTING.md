@@ -14,10 +14,12 @@ which layer a claim rests on.
 ## The harness: `jh`
 
 `vendor/jarvisos/harness/jh` wraps everything below into one command
-(`jh install` puts it on PATH and wires the Claude Code hooks and skill):
+(`jh install` puts it on PATH and wires the Claude Code hooks, skills and CLAUDE.md):
 `jh status`, `jh build image|check|app NAME|rom`, `jh emu up|down|restart`,
 `jh test fast|all|SUITE`, `jh cycle`, `jh logs`, `jh q`, `jh trace`,
-`jh watch on|off`. Results and logs of every run are kept in `~/.jh/runs/`.
+`jh watch on|off`, `jh read`. Results of every run are kept in
+`/srv/jarvis/state/runs/`, build and emulator logs in `/srv/jarvis/logs/`; the
+server is shared, so builds take a lock and everyone uses one emulator.
 `harness/skill/SKILL.md` explains the loop; `harness/hooks/guard.py` holds the
 rules agents may not break (pushes, `lunch`, `pkill qemu`, taps while Kevin is
 watching). The scripts below still work on their own.

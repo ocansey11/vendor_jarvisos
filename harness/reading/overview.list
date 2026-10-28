@@ -1,0 +1,47 @@
+title: The codebase at a glance: where each part of JarvisOS lives
+by: Kevin's Claude, 28 Oct 2026
+
+# 1. START HERE
+vendor/jarvisos/ARCHITECTURE.md | the service's parts and how they connect
+vendor/jarvisos/TESTING.md | what can be proven where: host, emulator, phone
+vendor/jarvisos/harness/skill/SKILL.md | how to build, boot, test (jh)
+
+# 2. HOW JARVIS GETS INTO THE ROM
+vendor/jarvisos/jarvisos.mk | what the product adds: apps, libraries, models, properties
+frameworks/base/services/jarvis/Android.bp | the service library and its native dependencies
+frameworks/base/services/java/com/android/server/SystemServer.java | where the service starts at boot (search: JarvisService)
+vendor/jarvisos/sepolicy/private/service.te | SELinux: the jarvis services
+vendor/jarvisos/sepolicy/private/service_contexts | SELinux: service names to types
+
+# 3. WHAT APPS SEE (public API)
+frameworks/base/core/java/android/jarvis/IJarvisService.aidl | queries, status, history
+frameworks/base/core/java/android/jarvis/IToolRegistry.aidl | tools
+frameworks/base/core/java/android/jarvis/JarvisManager.java | the wrapper apps use
+frameworks/base/core/java/android/jarvis/JarvisSession.java | sessions (an app lets Jarvis take part)
+
+# 4. THE SERVICE (inside system_server)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/JarvisService.java | entry point: Binder endpoints, boot, processQuery
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/FastPath.java | small requests answered by Needle, no chat model
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/JarvisExecutor.java | the agent loop (search: MAX_TURNS)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/ToolDispatcher.java | every tool call, and the session fence
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionManager.java | sessions
+frameworks/base/services/jarvis/java/com/android/server/jarvis/history/History.java | what is kept, and for how long
+frameworks/base/services/jarvis/java/com/android/server/jarvis/indexing/JarvisIndexWorker.java | files on the phone into the search index
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/Inference.java | the one door to the models, two engines behind it
+
+# 5. NATIVE ENGINES
+vendor/llama.cpp/jarvisos/llama_jni.cpp | llama.cpp to Java
+vendor/cactus/jarvisos/jarvis_jni.cpp | Cactus to Java
+vendor/jarvisos/native/needle/needle_jni.cpp | Needle (fast path, speech) to Java
+
+# 6. APPS
+vendor/jarvisos/apps/Jarvis/src/com/jarvisos/app/MainActivity.java | the Jarvis app: chat, tools, history tabs
+vendor/jarvisos/apps/JarvisAlarmDemo/AndroidManifest.xml | the smallest app that gives Jarvis tools
+vendor/jarvisos/apps/JarvisAlarmDemo/src/com/jarvisos/demo/alarms/SetAlarmTool.java | one app tool, end to end
+vendor/jarvisos/tools/set_flashlight.json | a built-in tool definition (@system/)
+
+# 7. TESTS AND HARNESS
+vendor/jarvisos/harness/jh | the harness itself
+vendor/jarvisos/harness/hooks/guard.py | the rules agents may not break, and why
+vendor/jarvisos/tests/run-all.sh | host tests (no emulator)
+vendor/jarvisos/tests/emulator/app-tools.sh | apps' tools on the emulator

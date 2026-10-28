@@ -10,7 +10,8 @@ import os
 import re
 import sys
 
-WATCHING = os.path.expanduser("~/.jh/watching")
+# Shared by everyone on the server (jh keeps its state in /srv/jarvis/state).
+WATCHING = "/srv/jarvis/state/watching"
 
 # Where a command starts: the line start, or after ; & | && || ( or "then"/"do".
 # Rules anchor on it so that a word inside text (a heredoc, a commit message,

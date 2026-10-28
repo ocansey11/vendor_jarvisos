@@ -1,0 +1,37 @@
+title: "Turn on the flashlight": one request from the app to the torch and back
+by: Kevin's Claude, 28 Oct 2026
+
+# 1. THE REQUEST LEAVES THE APP
+vendor/jarvisos/apps/Jarvis/src/com/jarvisos/app/ChatScreen.java | where the typed text is sent
+vendor/jarvisos/apps/Jarvis/src/com/jarvisos/app/VoiceRecorder.java | the spoken version (16 kHz PCM)
+frameworks/base/core/java/android/jarvis/JarvisManager.java | the app-side call (processQuery)
+frameworks/base/core/java/android/jarvis/IJarvisService.aidl | across Binder
+
+# 2. THE FAST PATH (tried first)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/JarvisService.java | processQuery: fast path first, then the agent loop (search: mFastPath)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/FastPath.java | tryText: Needle names tools with a confidence (search: confidencePercent)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/Needle.java | keeps all Needle calls on one thread
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/NeedleWrapper.java | the JNI door to Needle and Whistle
+vendor/jarvisos/native/needle/needle_jni.cpp | native side
+
+# 3. RUNNING THE TOOL
+vendor/jarvisos/tools/set_flashlight.json | how the tool is described to the models
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/ToolScannerService.java | how tools are found and indexed at boot and on install
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/ToolDispatcher.java | dispatchByName: the fence, then the tool
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/SystemToolExecutor.java | @system/ tools run inside system_server (search: flashlight)
+
+# 4. WHEN THE FAST PATH IS NOT SURE: THE AGENT LOOP
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/JarvisExecutor.java | the loop, at most 5 turns
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/RouterNode.java | which node runs next
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/PlanNode.java | first node: what is this request
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/RetrieveNode.java | context from the phone's files
+frameworks/base/services/jarvis/java/com/android/server/jarvis/search/MetadataSearch.java | keyword search before vectors
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/ToolNode.java | reads the model's tool call and dispatches it
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/RespondNode.java | the final answer
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/Inference.java | the model call, whichever engine
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/LlamaEngine.java | llama.cpp from Java
+vendor/llama.cpp/jarvisos/llama_jni.cpp | native completion
+
+# 5. AFTERWARDS
+frameworks/base/services/jarvis/java/com/android/server/jarvis/history/History.java | the exchange is kept for 24 h
+vendor/jarvisos/tests/emulator/app-tools.sh | the test that drives tools on the emulator

@@ -1,0 +1,43 @@
+title: A game of tic-tac-toe against Jarvis, in the order a game runs
+by: Kevin's Claude, 18 Oct 2026
+
+# 1. THE GAME DECLARES ITSELF (read at install)
+vendor/jarvisos/apps/JarvisTicTacToe/res/xml/jarvis_session.xml | session manifest: rules, persona, session tools, events, turn
+vendor/jarvisos/apps/JarvisTicTacToe/AndroidManifest.xml | the tools as receivers, and the pointer to the session manifest
+vendor/jarvisos/apps/JarvisTicTacToe/res/xml/tool_move_schema.xml | the value move takes
+
+# 2. THE GAME (the app's side)
+vendor/jarvisos/apps/JarvisTicTacToe/src/com/jarvisos/tictactoe/Game.java | game logic + AX: start session, send events, answer tools
+vendor/jarvisos/apps/JarvisTicTacToe/src/com/jarvisos/tictactoe/GameActivity.java | the screen, the new-game pop-up
+vendor/jarvisos/apps/JarvisTicTacToe/src/com/jarvisos/tictactoe/Board.java | rules and the game tree (minimax) behind evaluate_moves
+vendor/jarvisos/apps/JarvisTicTacToe/src/com/jarvisos/tictactoe/JarvisTool.java | how a tool call reaches the app (protected broadcast)
+vendor/jarvisos/apps/JarvisTicTacToe/src/com/jarvisos/tictactoe/MoveTool.java | one tool: move(cell)
+
+# 3. THE DOOR BETWEEN APP AND JARVIS (public API, Binder)
+frameworks/base/core/java/android/jarvis/JarvisSession.java | what an app calls: start, event, end
+frameworks/base/core/java/android/jarvis/IJarvisSessionService.aidl | the Binder interface
+
+# 4. JARVIS'S SIDE (system service)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionManifest.java | parses and checks the manifest
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionRegistry.java | which installed apps offer sessions
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionManager.java | open/close sessions, ownership + foreground checks, runs turns
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/EventLimiter.java | caps event size and rate
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionPrompt.java | Jarvis builds its own prompt (no prompts from apps)
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionTurn.java | one turn: model calls, grammar, retries, give up, say
+frameworks/base/services/jarvis/java/com/android/server/jarvis/session/SessionTools.java | the say tool Jarvis adds
+frameworks/base/services/jarvis/java/com/android/server/jarvis/tools/ToolDispatcher.java | every tool call passes here: the tool fence (search: Fence)
+
+# 5. THE MODEL
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/Inference.java | engine facade: completeWithOptions
+frameworks/base/services/jarvis/java/com/android/server/jarvis/inference/LlamaEngine.java | the llama.cpp engine in Java
+vendor/llama.cpp/jarvisos/llama_jni.cpp | native: grammar, calls-only replies, prompt cache reuse
+
+# 6. AFTER THE GAME
+frameworks/base/services/jarvis/java/com/android/server/jarvis/history/History.java | kept ~24 h as a conversation, DreamWorker input, forgetting
+frameworks/base/services/jarvis/java/com/android/server/jarvis/agent/DreamWorker.java | learns facts about the user from kept conversations
+vendor/jarvisos/apps/Jarvis/src/com/jarvisos/app/HistoryScreen.java | the History tab
+vendor/jarvisos/apps/Jarvis/src/com/jarvisos/app/ToolsScreen.java | test-mode Tools view (search: Session)
+
+# 7. DESIGN AND TESTS
+vendor/jarvisos/AGENT_EXPERIENCE.md | the plan: section 11 sessions, 11.13 history, 12 tool contract
+vendor/jarvisos/tests/emulator/tictactoe.sh | end-to-end test, 49 checks
