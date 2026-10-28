@@ -1,0 +1,10 @@
+#!/bin/sh
+# Adds "Server-user: <account>" to every commit made on the build server, so
+# Kevin can see whose account (and so whose Claude) made it, whatever
+# user.name says. Wired into the four JarvisOS repos by `jh install`.
+git interpret-trailers --in-place --if-exists replace \
+    --trailer "Server-user: $(id -un)" "$1" || exit 1
+# Then the repo tool's own hook (Change-Id), as before.
+orig="$(git rev-parse --git-common-dir)/hooks/commit-msg"
+[ -x "$orig" ] && exec "$orig" "$@"
+exit 0

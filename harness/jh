@@ -88,6 +88,8 @@ cmd_status() {
             else pushed="differs from GitHub ($remote)"; fi
         fi
         printf "  %-17s %-14s %s  dirty=%s  %s\n" "$path" "$branch" "$head" "$dirty" "$pushed"
+        # Who made what is not on GitHub yet (Server-user: the account that committed).
+        [[ "$pushed" == NOT* ]] && git -C "$path" log --format='      %h %<(16,trunc)%an %<(9,trunc)%(trailers:key=Server-user,valueonly,separator=%x2C) %s' "$remote"..HEAD | cut -c1-150
     done
     echo "== tmux"; tmux ls 2>/dev/null | sed 's/^/  /'
     echo "== build"
@@ -420,6 +422,8 @@ cmd_install() {
     ln -sfn "$HARNESS/skill" "$TOP/.claude/skills/jarvis-harness"
     ln -sfn "$TOP/vendor/jarvisos/skills/jarvis-presentation" "$TOP/.claude/skills/jarvis-presentation"
     ln -sfn "$HARNESS/CLAUDE.md" "$TOP/CLAUDE.md"
+    # Every commit records the server account that made it (harness/git-hooks/commit-msg).
+    for r in "${REPOS[@]}"; do git -C "${r%%|*}" config core.hooksPath "$HARNESS/git-hooks"; done
     chmod +x "$HARNESS/jh" "$HARNESS/hooks/"*.py "$HARNESS"/*.sh
     # /usr/local/bin needs root; everyone else already finds it there.
     [ -w /usr/local/bin ] && ln -sfn "$HARNESS/jh" /usr/local/bin/jh

@@ -10,6 +10,9 @@ Sam and Desmond, group `jarvis`. Kevin owns the project and decides every push.
   this; don't go around it (no raw `m`, `emulator`, or second builds).
 - Your own repos' branches are shared working trees: commit small, say what you
   changed, and don't rewrite history or reset someone else's work.
+- Commit under your own name (`git config --global user.name/user.email`).
+  A hook adds `Server-user: <account>` to every commit; don't remove it or
+  skip hooks (`--no-verify`). Kevin reads it before he pushes.
 - Docs: `ARCHITECTURE.md` (service internals), `AGENT_EXPERIENCE.md`
   (sessions), `TESTING.md`. Update them when you change what they describe.
 
