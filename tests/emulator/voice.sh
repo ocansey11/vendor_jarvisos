@@ -5,11 +5,11 @@
 # must still reach the chat model.
 #   vendor/jarvisos/tests/emulator/voice.sh
 # Needs the four models installed (cmd jarvis install-model chat|embed|needle|whistle)
-# and spoken clips in $CLIPS (default ~/jarvis-models/voice-clips): flash-on-*.wav,
+# and spoken clips in $CLIPS (default /srv/jarvis/models/voice-clips): flash-on-*.wav,
 # flash-off-*.wav. Any 16-bit PCM WAV will do; ours were made with piper.
 TOP="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 ADB="$TOP/out/host/linux-x86/bin/adb"
-CLIPS="${CLIPS:-$HOME/jarvis-models/voice-clips}"
+CLIPS="${CLIPS:-/srv/jarvis/models/voice-clips}"
 PASS=0; FAIL=0
 
 expect() {   # expect "what" "substring" "actual output"

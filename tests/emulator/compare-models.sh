@@ -3,7 +3,7 @@
 # fast path off so every request reaches the chat model. For each request it
 # records the tool the model called, its arguments, what the tool returned, the
 # reply and the time. "ok" means the right tool; check the arguments by eye.
-#   vendor/jarvisos/tests/emulator/compare-models.sh ~/jarvis-models/<model>.gguf
+#   vendor/jarvisos/tests/emulator/compare-models.sh /srv/jarvis/models/<model>.gguf
 # Writes ~/model-compare-<model>.tsv. Run it once per model and compare the files.
 # The tools really run (torch, alarm, volume...); none of the requests sends a
 # message or makes a call.

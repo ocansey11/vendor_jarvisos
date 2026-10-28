@@ -168,7 +168,7 @@ adb shell "cmd jarvis query 'set an alarm for 7:30 called gym'"
 ```
 
 **Voice and the fast path.** Needle 3 and Whistle are installed the same way
-(the files are in `~/jarvis-models/needle`), then `voice.sh` checks that typed
+(the files are in `/srv/jarvis/models/needle`), then `voice.sh` checks that typed
 and spoken requests switch the torch without the chat model and that the
 camera service confirms it:
 
@@ -176,14 +176,14 @@ camera service confirms it:
 adb shell -T cmd jarvis install-model needle  < needle3.cact
 adb shell -T cmd jarvis install-model whistle < whistle.cact
 adb shell "cmd jarvis route 'turn on the flashlight'"       # what would run, and how sure
-adb shell -T cmd jarvis voice < ~/jarvis-models/voice-clips/flash-on-alan.wav
+adb shell -T cmd jarvis voice < /srv/jarvis/models/voice-clips/flash-on-alan.wav
 vendor/jarvisos/tests/emulator/voice.sh [--slow]            # --slow also times the chat model
 ```
 
 The emulator runs with no audio, so speech is fed in as WAV files; the clips
 are synthetic (piper and espeak-ng). 8 Oct 2026: 29 of 29.
 
-The test models are in `~/jarvis-models` on the build server. They survive an
+The test models are in `/srv/jarvis/models` on the build server. They survive an
 emulator restart; a wiped `/data` needs them installed again.
 
 Expected on the emulator with no model installed: the store opens and tools load, the three models

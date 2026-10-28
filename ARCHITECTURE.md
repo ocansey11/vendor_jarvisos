@@ -383,7 +383,7 @@ All three endpoints are published by `JarvisService.onStart()` and share its lif
 └── index_tools_needle/ ← Needle's own tool index
 ```
 
-On the build server, models for the emulator live in `~/jarvis-models`;
+On the build server, models for the emulator live in `/srv/jarvis/models`;
 `jh models` installs any the emulator is missing.
 
 ---
