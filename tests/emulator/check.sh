@@ -1,6 +1,6 @@
 #!/bin/bash
 # Collects what the JarvisOS service did on the running emulator.
-ADB=~/android/lineage/out/host/linux-x86/bin/adb
+ADB=/srv/jarvis/lineage/out/host/linux-x86/bin/adb
 sh() { $ADB shell "$@" 2>&1; }
 echo "== boot";          sh getprop sys.boot_completed; sh getprop ro.build.fingerprint; sh uptime
 echo "== system_server"; sh 'pidof system_server; getprop sys.system_server.start_count 2>/dev/null'

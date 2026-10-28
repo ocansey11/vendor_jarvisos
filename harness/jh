@@ -20,7 +20,7 @@
 # 0 or 1. Full output goes to ~/.jh/runs/; the path is printed. Builds always
 # run in tmux session `build`, the emulator in `emu`. See SKILL.md.
 
-TOP=/root/android/lineage
+TOP=/srv/jarvis/lineage
 HARNESS="$TOP/vendor/jarvisos/harness"
 ADB="$TOP/out/host/linux-x86/bin/adb"
 EMU_SCRIPTS="$TOP/vendor/jarvisos/tests/emulator"

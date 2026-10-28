@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /root/android/lineage/vendor/jarvisos/harness/hooks/guard.py",
+            "command": "python3 /srv/jarvis/lineage/vendor/jarvisos/harness/hooks/guard.py",
             "timeout": 10
           }
         ]
