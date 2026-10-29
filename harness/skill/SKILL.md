@@ -64,6 +64,12 @@ emulator. Everything shared lives in `/srv/jarvis`: `state/` (locks, the
 watching flag, test runs), `logs/` (build and emulator logs and summaries),
 `models/` (read-only test models), `ccache/`.
 
+- Builds and the emulator run as `jarvisbuild`, which owns `out/` (Android's
+  build sets file times there, which only a file's owner may do, and its
+  sandbox takes root's override away too). `jh` does this through a sudo rule
+  that allows only the four build/run scripts. Never build outside `jh`
+  (`m`, `mka`, `breakfast` as yourself): it fails, or leaves files only you own.
+  Setup: `harness/setup-build-account.sh`, once, as root.
 - One build at a time: `jh build` refuses while anyone's build holds the lock
   and says whose it is; `jh build wait` waits for it, whoever started it.
 - One emulator: `jh emu up` uses the one that is running or starting. Before

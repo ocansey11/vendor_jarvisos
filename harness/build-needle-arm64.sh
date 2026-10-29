@@ -4,6 +4,9 @@
 #   tmux new -d -s build "flock -n /srv/jarvis/state/build.lock vendor/jarvisos/harness/build-needle-arm64.sh"
 cd /srv/jarvis/lineage || exit 1
 LOGS=${LOGS:-/srv/jarvis/logs}
+# Shared with the team: files stay group-writable, one ccache for everyone.
+umask 002
+export CCACHE_DIR=${CCACHE_DIR:-/srv/jarvis/ccache} CCACHE_UMASK=002
 export USE_CCACHE=1 CCACHE_EXEC=/usr/bin/ccache
 source build/envsetup.sh >/dev/null
 breakfast Pong userdebug >/dev/null 2>&1 || { echo "exit=1 breakfast failed" > "$LOGS/build-needle-arm64.summary"; exit 1; }

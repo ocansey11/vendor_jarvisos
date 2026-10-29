@@ -3,6 +3,9 @@
 # Run inside tmux: tmux new -d -s build "vendor/jarvisos/tests/emulator/build.sh [targets...]"   (default target: full image)
 cd /srv/jarvis/lineage || exit 1
 LOGS=${LOGS:-/srv/jarvis/logs}
+# Shared with the team: files stay group-writable, one ccache for everyone.
+umask 002
+export CCACHE_DIR=${CCACHE_DIR:-/srv/jarvis/ccache} CCACHE_UMASK=002
 export USE_CCACHE=1 CCACHE_EXEC=/usr/bin/ccache
 source build/envsetup.sh >/dev/null
 breakfast sdk_phone_x86_64 userdebug >/dev/null 2>&1 || { echo "exit=1 breakfast failed" > "$LOGS/build-jarvis-emu.summary"; exit 1; }

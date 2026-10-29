@@ -51,6 +51,10 @@ jarvis_ready() { ash cmd jarvis status | grep -q "ready: true"; }
 # Shared between users: a build holds BUILD_LOCK while it runs; the emulator
 # is one qemu process, whoever started it.
 build_running() { ! flock -n "$BUILD_LOCK" true 2>/dev/null; }
+# Builds and the emulator run as jarvisbuild, which owns out/: Android's build
+# sets file times there, which only a file's owner may do (sudo rule in
+# /etc/sudoers.d/jarvis-build allows exactly these scripts).
+AS_BUILDER=""; id jarvisbuild >/dev/null 2>&1 && AS_BUILDER="sudo -n -u jarvisbuild"
 emulator_process() { pgrep -f '^\S*qemu-system-x86_64' >/dev/null; }
 
 refuse_if_watching() {   # refuse_if_watching WHAT
@@ -144,7 +148,7 @@ cmd_build() {
     echo "$(whoami): $(basename "$script") ${targets[*]:-image} since $(date '+%d %b %H:%M')" > "$STATE/build-owner"
     # Builds slow the emulator to a crawl; run them at low priority when it is up.
     local nice=0; "$ADB" devices 2>/dev/null | grep -q 'emulator-.*device$' && nice=19
-    tmux new -d -s build "umask 002; LOGS=$LOGS flock -n $BUILD_LOCK nice -n $nice $script ${targets[*]}"
+    tmux new -d -s build "umask 002; LOGS=$LOGS flock -n $BUILD_LOCK nice -n $nice $AS_BUILDER $script ${targets[*]}"
     # The build takes the lock a moment after tmux starts; wait for it so `wait` cannot return early.
     for _ in $(seq 20); do build_running && break; sleep 0.5; done
     build_running || fail "the build did not start; see tmux 'build'"
@@ -167,7 +171,7 @@ emu_up() {
     if booted 2>/dev/null && jarvis_ready; then note "already up"; return 0; fi
     # One emulator for everyone: if anyone's is starting, wait for that one.
     if emulator_process; then note "an emulator is already starting; waiting for it"
-    else tmux new -d -s emu "umask 002; LOGS=$LOGS $EMU_SCRIPTS/run.sh $*"; note "booting (tmux 'emu' of $(whoami))"; fi
+    else tmux new -d -s emu "umask 002; LOGS=$LOGS $AS_BUILDER $EMU_SCRIPTS/run.sh $*"; note "booting (tmux 'emu' of $(whoami))"; fi
     timeout 300 "$ADB" wait-for-device || fail "no emulator after 5 min; see tmux 'emu' and $LOGS/emu-*.log"
     for _ in $(seq 120); do booted && break; sleep 5; done
     booted || fail "emulator did not finish booting in 10 min"

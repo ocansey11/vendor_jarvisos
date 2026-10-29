@@ -8,6 +8,8 @@ Sam and Desmond, group `jarvis`. Kevin owns the project and decides every push.
   booting or testing anything. `jh read overview` lists where everything lives.
 - One `out/`, one build at a time, one emulator for everyone. `jh` enforces
   this; don't go around it (no raw `m`, `emulator`, or second builds).
+  Builds run as the account `jarvisbuild`, which owns `out/`; building as
+  yourself fails.
 - Your own repos' branches are shared working trees: commit small, say what you
   changed, and don't rewrite history or reset someone else's work.
 - Commit under your own name (`git config --global user.name/user.email`).

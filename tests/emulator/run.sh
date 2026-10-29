@@ -3,6 +3,9 @@
 # Run inside tmux: tmux new -d -s emu vendor/jarvisos/tests/emulator/run.sh    (add -wipe-data for a clean /data)
 cd /srv/jarvis/lineage || exit 1
 LOGS=${LOGS:-/srv/jarvis/logs}
+# Shared with the team: files stay group-writable, one ccache for everyone.
+umask 002
+export CCACHE_DIR=${CCACHE_DIR:-/srv/jarvis/ccache} CCACHE_UMASK=002
 # The paths breakfast would set, without breakfast: it touches files in out/
 # with set times, which only their owner may do, so it fails for anyone but
 # whoever built them (the server is shared).
