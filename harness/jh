@@ -425,6 +425,8 @@ cmd_install() {
     ln -sfn "$HARNESS/claude-settings.json" "$TOP/.claude/settings.json"
     ln -sfn "$HARNESS/skill" "$TOP/.claude/skills/jarvis-harness"
     ln -sfn "$TOP/vendor/jarvisos/skills/jarvis-presentation" "$TOP/.claude/skills/jarvis-presentation"
+    ln -sfn "$TOP/vendor/jarvisos/skills/jarvisos-ax" "$TOP/.claude/skills/jarvisos-ax"
+    ln -sfn "$TOP/vendor/jarvisos/skills/jarvisos-architecture" "$TOP/.claude/skills/jarvisos-architecture"
     ln -sfn "$HARNESS/CLAUDE.md" "$TOP/CLAUDE.md"
     # Every commit records the server account that made it (harness/git-hooks/commit-msg).
     for r in "${REPOS[@]}"; do git -C "${r%%|*}" config core.hooksPath "$HARNESS/git-hooks"; done
@@ -432,7 +434,7 @@ cmd_install() {
     # /usr/local/bin needs root; everyone else already finds it there.
     [ -w /usr/local/bin ] && ln -sfn "$HARNESS/jh" /usr/local/bin/jh
     command -v jh >/dev/null || fail "jh is not on PATH; ask Kevin to run 'jh install' as root"
-    ok "jh on PATH ($(command -v jh)), hooks in $TOP/.claude/settings.json, skills jarvis-harness and jarvis-presentation, CLAUDE.md"
+    ok "jh on PATH ($(command -v jh)), hooks in $TOP/.claude/settings.json, skills jarvis-harness, jarvis-presentation, jarvisos-ax and jarvisos-architecture, CLAUDE.md"
 }
 
 case "$1" in

@@ -271,3 +271,7 @@ synthetic taps:
   (roadblock 36), the grammar let the model talk before calling (37), the
   model misread a correct tool (38), half an emoji hung the test (39).
 
+## Prompt injection
+
+The attack surface for injected instructions and the test plan (owner: Sam)
+are in `PROMPT_INJECTION.md`.

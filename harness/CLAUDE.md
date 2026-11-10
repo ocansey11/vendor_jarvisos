@@ -16,7 +16,11 @@ Sam and Desmond, group `jarvis`. Kevin owns the project and decides every push.
   A hook adds `Server-user: <account>` to every commit; don't remove it or
   skip hooks (`--no-verify`). Kevin reads it before he pushes.
 - Docs: `ARCHITECTURE.md` (service internals), `AGENT_EXPERIENCE.md`
-  (sessions), `TESTING.md`. Update them when you change what they describe.
+  (sessions), `TESTING.md`. The AX data model (tools, grants, consent, the
+  ERD draft) is the `jarvisos-ax` skill, with its differences from the code
+  in `skills/jarvisos-ax/references/code-today.md`. Why each part is built
+  the way it is: the `jarvisos-architecture` skill. Security testing:
+  `PROMPT_INJECTION.md`. Update them when you change what they describe.
 
 ## Leave a reading list for Kevin
 

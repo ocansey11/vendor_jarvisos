@@ -1,0 +1,1848 @@
+{
+ "generated_at": "2026-11-10T21:01:23Z",
+ "commits_per_repo": 60,
+ "repos": [
+  {
+   "name": "frameworks/base",
+   "branch": "jarvis-22.2",
+   "commits": [
+    {
+     "hash": "13f0b7c8c2b9",
+     "date": "2026-10-22T22:04:09+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: Cactus gets its tools, its bundles, and stays out of auto on x86"
+    },
+    {
+     "hash": "fa9ee35c8818",
+     "date": "2026-10-18T03:25:59+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: keep a day of history (chats and app sessions); DreamWorker gets input"
+    },
+    {
+     "hash": "6d5fedb57141",
+     "date": "2026-10-17T23:33:00+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: session record in getStatus for the Jarvis app (WIP, not yet run)"
+    },
+    {
+     "hash": "a9ab7a3f797c",
+     "date": "2026-10-17T21:04:04+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: sessions (Agent Experience), a tool fence, and grammar options"
+    },
+    {
+     "hash": "11e77eed3ce3",
+     "date": "2026-10-17T15:43:32+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: trace each request for the app's test mode; shell runs tools as system"
+    },
+    {
+     "hash": "535f15a2d228",
+     "date": "2026-10-08T17:58:09+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: fast path through Needle, spoken queries, confirmed torch"
+    },
+    {
+     "hash": "94b2d8a11ceb",
+     "date": "2026-10-05T21:46:04+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: inference engines behind one interface, llama.cpp as the second"
+    },
+    {
+     "hash": "4c9918d8ad2b",
+     "date": "2026-10-05T19:29:31+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: require a signature permission, add callTool and getStatus"
+    },
+    {
+     "hash": "93d244ffd63d",
+     "date": "2026-10-02T15:54:20+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: make tool calls to apps work, and system-only"
+    },
+    {
+     "hash": "898250640967",
+     "date": "2026-10-02T15:54:20+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: start under system_server and add a shell command"
+    },
+    {
+     "hash": "51dfc3cca371",
+     "date": "2026-10-02T13:37:38+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: keep the final answer in summaries of sessions without turns"
+    },
+    {
+     "hash": "8ac112d7c4e5",
+     "date": "2026-10-02T13:37:38+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: survive a missing native library at startup"
+    },
+    {
+     "hash": "2b1204c55300",
+     "date": "2026-10-02T13:37:38+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: generate the ObjectBox code with the real processor"
+    },
+    {
+     "hash": "24e18194cb1a",
+     "date": "2026-10-02T11:22:30+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis: replace WorkManager with an in-process scheduler"
+    },
+    {
+     "hash": "879961b84755",
+     "date": "2026-10-02T10:51:26+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Add JarvisOS system service"
+    },
+    {
+     "hash": "5c05c66e872c",
+     "date": "2026-09-19T23:56:39+03:00",
+     "author": "Duy Truong",
+     "server_user": "",
+     "subject": "Fix silence-injection policy skip in VirtualAudioController"
+    },
+    {
+     "hash": "f3ad80f66884",
+     "date": "2026-09-19T23:56:36+03:00",
+     "author": "Achim Thesmann",
+     "server_user": "",
+     "subject": "[24Q3] Mitigate BAL bypass via Companion Device Manager"
+    },
+    {
+     "hash": "b5f7b0413a09",
+     "date": "2026-09-19T23:56:33+03:00",
+     "author": "Iustin Ventaniuc",
+     "server_user": "",
+     "subject": "Fix boot-loop vulnerability in setPermissionGrantState"
+    },
+    {
+     "hash": "eff223c55801",
+     "date": "2026-09-19T23:56:30+03:00",
+     "author": "Aseem Kumar",
+     "server_user": "",
+     "subject": "Sanitize labels in GrantCredentialsPermissionActivity"
+    },
+    {
+     "hash": "63b30568abc4",
+     "date": "2026-09-19T23:56:27+03:00",
+     "author": "Soumyadeep Paul",
+     "server_user": "",
+     "subject": "Fix potential NPEs in PduParser.parsePartHeaders"
+    },
+    {
+     "hash": "eec9d9a6be2b",
+     "date": "2026-09-19T23:56:23+03:00",
+     "author": "Gabriel Roman",
+     "server_user": "",
+     "subject": "Truncate long device admin descriptions"
+    },
+    {
+     "hash": "872c32a2309a",
+     "date": "2026-09-19T23:56:20+03:00",
+     "author": "William Loh",
+     "server_user": "",
+     "subject": "Limit knownActivityEmbeddingCerts in manifest"
+    },
+    {
+     "hash": "c3af343ba1ee",
+     "date": "2026-09-19T23:56:17+03:00",
+     "author": "Duy Truong",
+     "server_user": "",
+     "subject": "Use byte count rather than string length for NMS component name check"
+    },
+    {
+     "hash": "70ad9aed1c82",
+     "date": "2026-09-19T23:56:11+03:00",
+     "author": "Daniil Hrybchuk",
+     "server_user": "",
+     "subject": "SystemUi UsbDialog: fix label vulnerability"
+    },
+    {
+     "hash": "a3bce44a1cd1",
+     "date": "2026-09-19T23:56:06+03:00",
+     "author": "Josh Hou",
+     "server_user": "",
+     "subject": "Fix path traversal and missing ownership check in LocaleManagerService"
+    },
+    {
+     "hash": "a4d3e13d5556",
+     "date": "2026-09-19T23:56:02+03:00",
+     "author": "Jiaming Liu",
+     "server_user": "",
+     "subject": "Add Task-level input sink to block cross-task tap pass-through"
+    },
+    {
+     "hash": "7578cbf03aab",
+     "date": "2026-09-19T23:55:58+03:00",
+     "author": "chihtinglo",
+     "server_user": "",
+     "subject": "Move input sink on top of the Activity when needed"
+    },
+    {
+     "hash": "9fa5e0c44fc1",
+     "date": "2026-09-19T23:55:55+03:00",
+     "author": "Dmitry Dementyev",
+     "server_user": "",
+     "subject": "Check notification permission in getAuthToken(notifyOnAuthFailure)."
+    },
+    {
+     "hash": "6688586844c3",
+     "date": "2026-09-19T23:55:49+03:00",
+     "author": "Devarshi Bhatt",
+     "server_user": "",
+     "subject": "Add size validation and trimming for ShortcutInfo objects."
+    },
+    {
+     "hash": "35e22cad8a8d",
+     "date": "2026-09-19T23:55:40+03:00",
+     "author": "Michael Mikhail",
+     "server_user": "",
+     "subject": "Hide media on smartspace view when setting is disabled"
+    },
+    {
+     "hash": "b888e9c7bf90",
+     "date": "2026-09-19T23:52:30+03:00",
+     "author": "Yutong Zhang",
+     "server_user": "",
+     "subject": "Autofill SaveUi URL validation and FLAG_IMMUTABLE"
+    },
+    {
+     "hash": "e8e527838206",
+     "date": "2026-09-19T23:52:27+03:00",
+     "author": "Gabriel-Radu Ilca",
+     "server_user": "",
+     "subject": "CVE-2025-22442: set profile user restrictions earlier"
+    },
+    {
+     "hash": "30a807e495ed",
+     "date": "2026-09-19T23:52:20+03:00",
+     "author": "George Chan",
+     "server_user": "",
+     "subject": "Security bug fix: Prevent USB data changes for non-owner users during lockdown mode."
+    },
+    {
+     "hash": "6b0628b84a22",
+     "date": "2026-09-19T23:48:41+03:00",
+     "author": "Himanshu Arora",
+     "server_user": "",
+     "subject": "RESTRICT AUTOMERGE [ExternalStorageProvider] Revoke URI permissions by path"
+    },
+    {
+     "hash": "0cdea1aff45a",
+     "date": "2026-09-19T23:47:28+03:00",
+     "author": "Albert Kong",
+     "server_user": "",
+     "subject": "Fix URI grant persistence bypass"
+    },
+    {
+     "hash": "b41022234b83",
+     "date": "2026-09-19T23:46:20+03:00",
+     "author": "Himanshu Arora",
+     "server_user": "",
+     "subject": "RESTRICT AUTOMERGE Filter ignorable Unicode codepoints in ExternalStorageProvider"
+    },
+    {
+     "hash": "ec5d73e98ac6",
+     "date": "2026-09-15T12:01:10+00:00",
+     "author": "LineageOS Infra",
+     "server_user": "",
+     "subject": "Automatic translation import"
+    },
+    {
+     "hash": "10c701da72e8",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Thomas Nguyen",
+     "server_user": "",
+     "subject": "RESTRICT AUTOMERGE: Fix vulnerabilities in PduParser"
+    },
+    {
+     "hash": "93e47591a593",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Jeremy Meyer",
+     "server_user": "",
+     "subject": "ResStringPool: Validate styleCount and offsets"
+    },
+    {
+     "hash": "8e4b14043f91",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Yang Kudurshian",
+     "server_user": "",
+     "subject": "RESTRICT AUTOMERGE Fix security vulnerability in getManageSpaceActivityIntent"
+    },
+    {
+     "hash": "bb68001f3b95",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Darshil Shah",
+     "server_user": "",
+     "subject": "Validate caller UID in openProxyFileDescriptor"
+    },
+    {
+     "hash": "cec31f8d1cbd",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Duy Truong",
+     "server_user": "",
+     "subject": "Add bracket checking support to SQLiteTokenizer"
+    },
+    {
+     "hash": "178e5b592eed",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Duy Truong",
+     "server_user": "",
+     "subject": "Fix security check bypass"
+    },
+    {
+     "hash": "a48aa67bf628",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Prabal Singh",
+     "server_user": "",
+     "subject": "LauncherApps: Scrub sensitive URIs in install sessions"
+    },
+    {
+     "hash": "18c4d0061a07",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Vipul Singh",
+     "server_user": "",
+     "subject": "Remove usage of Parcel.allowSquashing in RemoteViews and immediate unparceling of Bundle"
+    },
+    {
+     "hash": "642a21aba7f6",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Vipul Singh",
+     "server_user": "",
+     "subject": "Revert^2 \"Writing ApplicationInfoCache instead of multiple ApplicationInfos for nested RemoteViews\""
+    },
+    {
+     "hash": "82ba410bd921",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Candice Lo",
+     "server_user": "",
+     "subject": "Fix using the base type for checking"
+    },
+    {
+     "hash": "ef51a6234283",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Dmitry Dementyev",
+     "server_user": "",
+     "subject": "Properly parse meta_key in AccountsDb."
+    },
+    {
+     "hash": "41158cc97cf1",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Annie Lin",
+     "server_user": "",
+     "subject": "Harden startNextMatchingActivity() caller identity propagation."
+    },
+    {
+     "hash": "cd3edc03b64e",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Omar Eissa",
+     "server_user": "",
+     "subject": "Don't parse 3p recognizer metadata in safe mode"
+    },
+    {
+     "hash": "cb9ea9b2ecaa",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Achim Thesmann",
+     "server_user": "",
+     "subject": "Fix FGS mode in test"
+    },
+    {
+     "hash": "e078bc94c33b",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Yash Nagayach",
+     "server_user": "",
+     "subject": "Validate caller in SlicePermissionActivity to prevent spoofing."
+    },
+    {
+     "hash": "7e81fd734a59",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Oli Thompson",
+     "server_user": "",
+     "subject": "Sanitize intent selector in IntentForwarderActivity"
+    },
+    {
+     "hash": "f4343df742c9",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Matt Casey",
+     "server_user": "",
+     "subject": "Fix & speed up IntentForwarderActivityTest"
+    },
+    {
+     "hash": "616255ba4641",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Prabal Singh",
+     "server_user": "",
+     "subject": "Refactor: Add permission checks to Unarchive activities"
+    },
+    {
+     "hash": "2a74e9e8e257",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Charles Chen",
+     "server_user": "",
+     "subject": "Use setHideOverlayWindows instead of AppOpsManager"
+    },
+    {
+     "hash": "03119abb18a8",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Evan Severson",
+     "server_user": "",
+     "subject": "DO NOT MERGE: [ClipboardService] Check notification setting for given user"
+    },
+    {
+     "hash": "2e06316eacea",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Barış Kaya",
+     "server_user": "",
+     "subject": "Catch OutOfMemoryError while parsing xml in GameManagerService"
+    },
+    {
+     "hash": "943f3caf2351",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Aishwarya Mallampati",
+     "server_user": "",
+     "subject": "Make destAddr nullable"
+    },
+    {
+     "hash": "50953211cefc",
+     "date": "2026-09-09T18:36:58+00:00",
+     "author": "Oli Thompson",
+     "server_user": "",
+     "subject": "Set hide overlays on mini resolver"
+    }
+   ]
+  },
+  {
+   "name": "vendor/jarvisos",
+   "branch": "jarvis-22.2",
+   "commits": [
+    {
+     "hash": "5a12225",
+     "date": "2026-10-29T19:18:29+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "root",
+     "subject": "Builds and the emulator run as jarvisbuild, the owner of out/"
+    },
+    {
+     "hash": "b0f6e82",
+     "date": "2026-10-29T19:05:28+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "root",
+     "subject": "Emulator starts without breakfast, so anyone in the team can run it"
+    },
+    {
+     "hash": "5cc266a",
+     "date": "2026-10-28T09:25:50+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "root",
+     "subject": "Every commit records the server account that made it"
+    },
+    {
+     "hash": "4cb5e6c",
+     "date": "2026-10-28T09:19:09+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jh for a shared server; reading lists move into the harness"
+    },
+    {
+     "hash": "b52888c",
+     "date": "2026-10-28T09:03:20+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Test models now live in /srv/jarvis/models, shared with the team"
+    },
+    {
+     "hash": "c994ee3",
+     "date": "2026-10-28T09:01:51+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Architecture brought up to date; April skill modes to the local archive"
+    },
+    {
+     "hash": "7906c11",
+     "date": "2026-10-28T09:01:51+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Harness and emulator scripts: the tree now lives in /srv/jarvis/lineage"
+    },
+    {
+     "hash": "c375eb3",
+     "date": "2026-10-22T22:04:09+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Cactus on the emulator: tests, harness fix, talk notes (roadblock 50)"
+    },
+    {
+     "hash": "aed780e",
+     "date": "2026-10-22T21:10:12+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Harness: anchor hook rules on commands, test them; jh build wait reads the right summary; talk notes for 22 Oct"
+    },
+    {
+     "hash": "4ce9195",
+     "date": "2026-10-22T11:16:43+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Add jh, the JarvisOS harness: build, boot, test and inspect in one command"
+    },
+    {
+     "hash": "e529c50",
+     "date": "2026-10-18T03:25:59+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "History tab, test-mode session view, and game fixes found playing overnight"
+    },
+    {
+     "hash": "c68bcbf",
+     "date": "2026-10-17T23:33:01+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Jarvis app: show an app's session in the Tools tab, test mode (WIP, not yet run)"
+    },
+    {
+     "hash": "06db12c",
+     "date": "2026-10-17T23:01:05+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Tic-tac-toe: new-game pop-up (mark and opponent), Jarvis can be X, pause/resume, rematch and score, rules"
+    },
+    {
+     "hash": "f803ed4",
+     "date": "2026-10-17T22:48:29+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Tic-tac-toe: a two-player game first, Jarvis plays O only when invited"
+    },
+    {
+     "hash": "63b9fbf",
+     "date": "2026-10-17T22:40:05+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Tic-tac-toe: ignore a replaced session's late end, keep playing when Jarvis leaves; AX plan: the tool contract (action, values, state)"
+    },
+    {
+     "hash": "7194ef8",
+     "date": "2026-10-17T21:04:18+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Agent Experience: tic-tac-toe against Jarvis, the first session sample"
+    },
+    {
+     "hash": "6d2a0ad",
+     "date": "2026-10-17T18:32:53+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Rename the morphing UI plan to Agent Experience (AX); add sessions to the team page"
+    },
+    {
+     "hash": "5ae8461",
+     "date": "2026-10-17T18:06:13+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Plan: Agent Experience (AX) — sessions, events, start tools, asking on ambiguity"
+    },
+    {
+     "hash": "0c85ead",
+     "date": "2026-10-17T15:43:32+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Jarvis app: test mode for recording model comparisons"
+    },
+    {
+     "hash": "0b94310",
+     "date": "2026-10-17T15:17:29+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis-presentation: roadblock 35, small talk passed the fast-path bar"
+    },
+    {
+     "hash": "cab330b",
+     "date": "2026-10-17T15:08:47+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "tests: compare chat models on the emulator; roadblock 34"
+    },
+    {
+     "hash": "f33a296",
+     "date": "2026-10-17T12:32:02+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis-presentation: Cactus dropped .gguf in V1 (Sept 2025), not v2"
+    },
+    {
+     "hash": "78c519a",
+     "date": "2026-10-17T12:03:53+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Move April design docs to a local archive/ folder (not tracked)"
+    },
+    {
+     "hash": "b53e09d",
+     "date": "2026-10-08T18:01:18+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Plan: a surface that changes shape (morphing UI), for team discussion"
+    },
+    {
+     "hash": "9b76a33",
+     "date": "2026-10-08T17:58:09+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Voice and a fast path: Needle 3 and Whistle beside the chat model"
+    },
+    {
+     "hash": "5d64df9",
+     "date": "2026-10-05T21:46:04+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "llama.cpp engine: product wiring, tests, emulator setup, notes"
+    },
+    {
+     "hash": "dfd2d97",
+     "date": "2026-10-05T20:59:43+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis-presentation: what Cactus offers as of 5 Oct 2026 (research)"
+    },
+    {
+     "hash": "54f55bb",
+     "date": "2026-10-05T20:46:48+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "Jarvis app: show tools nested under the app that owns them"
+    },
+    {
+     "hash": "9786f2e",
+     "date": "2026-10-05T19:29:31+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "apps: the Jarvis app, with Chat and Tools screens"
+    },
+    {
+     "hash": "71ee331",
+     "date": "2026-10-05T14:44:44+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis-presentation: record the llama.cpp second-engine proposal (undecided)"
+    },
+    {
+     "hash": "7e32135",
+     "date": "2026-10-05T14:36:44+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis-presentation: vision notes, Cactus/ObjectBox dependency, 5 Oct emulator session"
+    },
+    {
+     "hash": "fe8b5bf",
+     "date": "2026-10-02T23:47:52+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvis-presentation: record ROM rebuild and Drive upload detour"
+    },
+    {
+     "hash": "84f704a",
+     "date": "2026-10-02T15:58:25+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "skills: correct the note on how SystemServer guards service start"
+    },
+    {
+     "hash": "b566d3c",
+     "date": "2026-10-02T15:58:12+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "skills: add the build account and study notes to jarvis-presentation"
+    },
+    {
+     "hash": "b679971",
+     "date": "2026-10-02T15:55:06+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: record the emulator results"
+    },
+    {
+     "hash": "55e0ef3",
+     "date": "2026-10-02T15:55:06+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "skills: jarvis-presentation, the roadblock timeline for the talk"
+    },
+    {
+     "hash": "f75c779",
+     "date": "2026-10-02T15:55:06+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "tests: stubs for the dispatcher changes; untrack Gradle output"
+    },
+    {
+     "hash": "01d9daa",
+     "date": "2026-10-02T15:55:06+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "apps: sample alarm app and an end-to-end tool test"
+    },
+    {
+     "hash": "b536620",
+     "date": "2026-10-02T13:38:55+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: describe the four test layers and record results"
+    },
+    {
+     "hash": "fb9ff72",
+     "date": "2026-10-02T13:38:54+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "tests: follow the service to services/jarvis and add a runner"
+    },
+    {
+     "hash": "4624df3",
+     "date": "2026-10-02T13:38:54+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "build: allow the JarvisOS files on generic-system products"
+    },
+    {
+     "hash": "1bcbb06",
+     "date": "2026-10-02T13:38:54+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "objectbox prebuilts: link liblog, add x86_64 for the emulator"
+    },
+    {
+     "hash": "6afcd56",
+     "date": "2026-10-02T11:22:33+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "objectbox prebuilts: add greenrobot essentials 3.1.0"
+    },
+    {
+     "hash": "732fc75",
+     "date": "2026-10-02T10:51:39+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "build: wire JarvisOS into the lineage-22.2 product"
+    },
+    {
+     "hash": "1e9a26a",
+     "date": "2026-04-09T15:40:26+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "fix: jarvisos.mk + session 12 log"
+    },
+    {
+     "hash": "2224960",
+     "date": "2026-04-09T14:50:36+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: Session 12 handoff"
+    },
+    {
+     "hash": "f7f8bb3",
+     "date": "2026-04-09T14:46:13+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "feat: 16 curated system tools + chaining demo scenarios"
+    },
+    {
+     "hash": "751a0ca",
+     "date": "2026-04-08T22:48:00+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "chore: add test scaffold (WIP — needs proper planning)"
+    },
+    {
+     "hash": "4fdedbd",
+     "date": "2026-04-08T22:17:05+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: update HANDOFF for session 11 end state"
+    },
+    {
+     "hash": "3268457",
+     "date": "2026-04-08T22:15:14+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: Phase 6 complete — AGENTS.md updated"
+    },
+    {
+     "hash": "6d46264",
+     "date": "2026-04-08T22:09:24+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: Phase 5 complete — AGENTS.md + HANDOFF.md updated"
+    },
+    {
+     "hash": "65b3f62",
+     "date": "2026-04-08T15:19:38+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: update AGENTIC_LOOP.md for Phase 5 with Gemma 4 as target model"
+    },
+    {
+     "hash": "03f9a60",
+     "date": "2026-04-08T14:57:39+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: update all MDs for JarvisService rename"
+    },
+    {
+     "hash": "2eb7d44",
+     "date": "2026-04-08T14:24:12+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: add ARCHITECTURE.md, mark Phase 4 complete"
+    },
+    {
+     "hash": "a066abc",
+     "date": "2026-04-05T11:14:41+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: update HANDOFF — Phase 4 complete, Claude Code remote work captured"
+    },
+    {
+     "hash": "3670dd8",
+     "date": "2026-04-05T11:12:32+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: update AGENTS.md to session 8 — Phase 4 state, correct file map, session log"
+    },
+    {
+     "hash": "b64ee6f",
+     "date": "2026-04-05T09:50:50+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: add all phase specs, CLAUDE.md, TOOL_DISPATCHER integration guide"
+    },
+    {
+     "hash": "5517d11",
+     "date": "2026-04-04T09:02:01+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: update CLAUDE.md, add TOOL_DISPATCHER.md, update HANDOFF"
+    },
+    {
+     "hash": "559a2f4",
+     "date": "2026-04-04T08:37:29+01:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "docs: add all phase specs and agentic loop architecture"
+    },
+    {
+     "hash": "834b808",
+     "date": "2026-03-18T15:29:28+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "chore: session 6 updates — AGENTS.md tool registry design, ObjectBox Android.bp fix, HANDOFF.md"
+    }
+   ]
+  },
+  {
+   "name": "vendor/cactus",
+   "branch": "jarvis-v2.2.2",
+   "commits": [
+    {
+     "hash": "5f7eda0",
+     "date": "2026-10-22T22:04:08+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "libcactus builds for x86_64 (the emulator) through the SIMDe shim"
+    },
+    {
+     "hash": "530516c",
+     "date": "2026-10-22T11:39:10+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvisos: x86_64 SIMDe shim now compiles every libcactus source; host test runner"
+    },
+    {
+     "hash": "e075cf5",
+     "date": "2026-10-22T11:26:27+00:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvisos: WIP x86_64 build for the emulator via SIMDe (not yet building)"
+    },
+    {
+     "hash": "e539800",
+     "date": "2026-10-02T10:51:21+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvisos: fix Soong build of libcactus"
+    },
+    {
+     "hash": "832af6b",
+     "date": "2026-10-02T10:21:27+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvisos: Soong build and system-service JNI on top of v2.2.2"
+    },
+    {
+     "hash": "2cfcdb8",
+     "date": "2026-09-26T05:09:48+02:00",
+     "author": "jakmro",
+     "server_user": "",
+     "subject": "bump: update version to v2.2.2"
+    },
+    {
+     "hash": "0a3782a",
+     "date": "2026-09-26T05:03:56+02:00",
+     "author": "Jakub Mroz",
+     "server_user": "",
+     "subject": "Add relative position attention kernel and bindings (#822)"
+    },
+    {
+     "hash": "fa094ce",
+     "date": "2026-09-25T03:03:31+02:00",
+     "author": "jakmro",
+     "server_user": "",
+     "subject": "bump: update version to v2.2.1"
+    },
+    {
+     "hash": "dbacc47",
+     "date": "2026-09-25T03:00:03+02:00",
+     "author": "Jakub Mroz",
+     "server_user": "",
+     "subject": "Expand Parakeet buckets (#818)"
+    },
+    {
+     "hash": "ec1c106",
+     "date": "2026-09-08T15:48:24+02:00",
+     "author": "jakmro",
+     "server_user": "",
+     "subject": "bump: update version to v2.2.0"
+    },
+    {
+     "hash": "d6b0edd",
+     "date": "2026-09-08T15:44:31+02:00",
+     "author": "Jakub Mroz",
+     "server_user": "",
+     "subject": "Fix padded-frame leakage and feature mismatch in the Parakeet encoder (#808)"
+    },
+    {
+     "hash": "09cb35a",
+     "date": "2026-08-26T12:45:30-04:00",
+     "author": "Moeez ahmed",
+     "server_user": "",
+     "subject": "fix(graph): deduplicate shared mmap weight files across component graphs (#794)"
+    },
+    {
+     "hash": "68bc8c7",
+     "date": "2026-08-23T19:45:15+02:00",
+     "author": "Parkirat Sandhu",
+     "server_user": "",
+     "subject": "Custom transpiler (#796)"
+    },
+    {
+     "hash": "71ddfc7",
+     "date": "2026-08-18T00:51:26+02:00",
+     "author": "jakmro",
+     "server_user": "",
+     "subject": "bump: update version to v2.1.0"
+    },
+    {
+     "hash": "ba2ee75",
+     "date": "2026-08-17T19:22:03+02:00",
+     "author": "Jakub Mroz",
+     "server_user": "",
+     "subject": "Bucket the Parakeet audio encoder (#791)"
+    },
+    {
+     "hash": "22b86a6",
+     "date": "2026-08-14T01:12:38+02:00",
+     "author": "Bhavyansh Sharma",
+     "server_user": "",
+     "subject": "fix: use per-matrix CQ4 reciprocals in Metal batch transform (#784)"
+    },
+    {
+     "hash": "ea7948c",
+     "date": "2026-08-13T12:16:13+02:00",
+     "author": "Nitish Agarwal",
+     "server_user": "",
+     "subject": "Include <iomanip> directly for std::setw/setfill/setprecision usage (#782)"
+    },
+    {
+     "hash": "c90a1af",
+     "date": "2026-08-08T17:32:45+01:00",
+     "author": "Henry Ndubuaku",
+     "server_user": "",
+     "subject": "Merge pull request #778 from cactus-compute/custom-transpiler"
+    },
+    {
+     "hash": "8226cfe",
+     "date": "2026-08-08T11:51:59-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Visual chagnes"
+    },
+    {
+     "hash": "e9773b1",
+     "date": "2026-08-08T11:36:30-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Code cleanup"
+    },
+    {
+     "hash": "4abf717",
+     "date": "2026-08-06T15:10:22-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Code simplifications"
+    },
+    {
+     "hash": "dc1a58d",
+     "date": "2026-08-06T13:15:42-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Tune CQ GEMV decode scheduling"
+    },
+    {
+     "hash": "9e69e03",
+     "date": "2026-08-06T12:41:06-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Optimize contiguous last-axis padding"
+    },
+    {
+     "hash": "2b95286",
+     "date": "2026-08-06T11:36:34-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Fix chunk retargeting of attention broadcasts"
+    },
+    {
+     "hash": "1ac9d72",
+     "date": "2026-08-06T11:06:23-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Merge main into custom-transpiler"
+    },
+    {
+     "hash": "ba1e98b",
+     "date": "2026-08-06T10:15:48-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Code reduction"
+    },
+    {
+     "hash": "ee89a96",
+     "date": "2026-08-06T00:10:25-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Kernel optmizations"
+    },
+    {
+     "hash": "e4f0d3e",
+     "date": "2026-08-05T19:57:51-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "code reduction"
+    },
+    {
+     "hash": "9a6b4dc",
+     "date": "2026-08-05T15:44:36-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Working optmized transpiler and runtime + advancements to shared kv caches and states."
+    },
+    {
+     "hash": "449363f",
+     "date": "2026-08-04T23:07:30-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Memory optmizations"
+    },
+    {
+     "hash": "1d90b40",
+     "date": "2026-08-04T20:44:38-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Working main models"
+    },
+    {
+     "hash": "fb6176c",
+     "date": "2026-08-03T00:08:35-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Performance upgrades"
+    },
+    {
+     "hash": "4c6733b",
+     "date": "2026-07-31T12:09:25-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Code reformatting"
+    },
+    {
+     "hash": "909da19",
+     "date": "2026-07-31T10:15:38-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Performace upgrades"
+    },
+    {
+     "hash": "e78aeca",
+     "date": "2026-07-29T23:54:24-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "performance upgrades"
+    },
+    {
+     "hash": "b65b667",
+     "date": "2026-07-29T22:36:46-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Performance upgrades"
+    },
+    {
+     "hash": "aa06bf6",
+     "date": "2026-07-29T15:28:44-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "New run operations with runtime plans"
+    },
+    {
+     "hash": "3b0b9cf",
+     "date": "2026-07-29T15:28:25-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "New run operations with runtime plans"
+    },
+    {
+     "hash": "e07c158",
+     "date": "2026-07-29T12:19:40-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added runtime plan"
+    },
+    {
+     "hash": "1d1837a",
+     "date": "2026-07-29T11:31:11-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "LFM convs"
+    },
+    {
+     "hash": "fb5963e",
+     "date": "2026-07-29T11:30:47-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Additional conv-state matching logic"
+    },
+    {
+     "hash": "ddcbcc8",
+     "date": "2026-07-29T10:49:36-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Further LFM support"
+    },
+    {
+     "hash": "6db22b2",
+     "date": "2026-07-29T10:03:18-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added cactus ops lowering with generator"
+    },
+    {
+     "hash": "8e0eec1",
+     "date": "2026-07-29T13:21:09+01:00",
+     "author": "Jakub Mroz",
+     "server_user": "",
+     "subject": "optimize attention and gemv kernels (#776)"
+    },
+    {
+     "hash": "3a51ea5",
+     "date": "2026-07-28T20:04:51-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added simplification of IR step (uses fusion matchers to determine fusion)"
+    },
+    {
+     "hash": "f97178c",
+     "date": "2026-07-28T20:04:35-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added simplification of IR step (uses fusion matchers to determine fusion)"
+    },
+    {
+     "hash": "9083766",
+     "date": "2026-07-28T16:37:46-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "LFM with cache (prefill + decode)"
+    },
+    {
+     "hash": "0cdd3d6",
+     "date": "2026-07-28T16:09:43-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Additional matchers for lfm MOE"
+    },
+    {
+     "hash": "ae567c6",
+     "date": "2026-07-28T16:07:07-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added LFM MOE model profile"
+    },
+    {
+     "hash": "8aa7672",
+     "date": "2026-07-28T15:58:50-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Additional fusions + nodes for MOE ops"
+    },
+    {
+     "hash": "80243d3",
+     "date": "2026-07-28T15:54:40-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Minor modifications to converter and input processing to support MOE models"
+    },
+    {
+     "hash": "610d3b4",
+     "date": "2026-07-28T15:15:10-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Additional extra matchers for RoPE, linear projs, and LSTMs (yet to be confirmed)"
+    },
+    {
+     "hash": "841bdae",
+     "date": "2026-07-28T14:56:46-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added extra matchers for extraneous constraints for fusions"
+    },
+    {
+     "hash": "aa231af",
+     "date": "2026-07-28T14:30:31-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added fusion definition matchers"
+    },
+    {
+     "hash": "344edc9",
+     "date": "2026-07-28T14:19:06-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Simplifications to fusion matcher functions"
+    },
+    {
+     "hash": "53c759e",
+     "date": "2026-07-28T10:06:04-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Added graph matchers"
+    },
+    {
+     "hash": "1e5297b",
+     "date": "2026-07-27T22:04:59-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Simplification of logic"
+    },
+    {
+     "hash": "338b5a5",
+     "date": "2026-07-27T10:47:53-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Converter testing"
+    },
+    {
+     "hash": "46ecc0d",
+     "date": "2026-07-27T10:47:26-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Matching nodes"
+    },
+    {
+     "hash": "9c7ed82",
+     "date": "2026-07-25T16:59:30-04:00",
+     "author": "Parkirat",
+     "server_user": "",
+     "subject": "Future instructions"
+    }
+   ]
+  },
+  {
+   "name": "vendor/llama.cpp",
+   "branch": "jarvisos",
+   "commits": [
+    {
+     "hash": "4b621acd5",
+     "date": "2026-10-17T21:04:04+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvisos: completion options, call-only replies, prompt prefix reuse"
+    },
+    {
+     "hash": "63fd67b2c",
+     "date": "2026-10-05T21:46:03+02:00",
+     "author": "Kevin Ocansey",
+     "server_user": "",
+     "subject": "jarvisos: Soong build and system-service JNI"
+    },
+    {
+     "hash": "c25030496",
+     "date": "2026-10-05T21:22:08+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "ci : skip container re-tagging when Require Docker is disabled (#30008)"
+    },
+    {
+     "hash": "8345f3339",
+     "date": "2026-10-05T08:55:21-07:00",
+     "author": "Max Krasnyansky",
+     "server_user": "",
+     "subject": "hexagon: matmul and flash-atten scalability updates (#29974)"
+    },
+    {
+     "hash": "d81235049",
+     "date": "2026-10-05T18:13:51+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "llama.cpp : bump version to 0.6.0 (#29997)"
+    },
+    {
+     "hash": "4d60b4d08",
+     "date": "2026-10-05T17:08:29+02:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "common, server : report model input/output modalities in GET /models (#29987)"
+    },
+    {
+     "hash": "c06f84160",
+     "date": "2026-10-05T17:37:50+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "sync : ggml"
+    },
+    {
+     "hash": "f05c8b278",
+     "date": "2026-10-05T17:37:50+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "ggml : bump version to 0.26.0 (ggml/1652)"
+    },
+    {
+     "hash": "e117148a4",
+     "date": "2026-10-05T19:14:23+05:30",
+     "author": "Aman Gupta",
+     "server_user": "",
+     "subject": "CUDA: make the alloc_deps check batch independent (#29986)"
+    },
+    {
+     "hash": "6c59c4007",
+     "date": "2026-10-05T15:15:00+02:00",
+     "author": "Ruben Ortlam",
+     "server_user": "",
+     "subject": "vulkan: fix Flash Attention shmem write out of bounds (#29988)"
+    },
+    {
+     "hash": "3c9e747f7",
+     "date": "2026-10-05T16:11:21+03:00",
+     "author": "virajwad",
+     "server_user": "",
+     "subject": "vulkan: revert mul_mat_id tile selection PR #29182 (#29936)"
+    },
+    {
+     "hash": "b809b886d",
+     "date": "2026-10-05T15:09:53+02:00",
+     "author": "Pascal",
+     "server_user": "",
+     "subject": "cuda: use the vector lightning indexer kernel on MUSA (#29990)"
+    },
+    {
+     "hash": "994e8f222",
+     "date": "2026-10-05T16:04:47+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "ci : add \"Require Docker\" flag to make-release workflow (#29989)"
+    },
+    {
+     "hash": "9d853bb36",
+     "date": "2026-10-05T14:57:41+02:00",
+     "author": "Giovanni Rivera",
+     "server_user": "",
+     "subject": "webui: Use toLocaleString() format consistently across chat message statistics (#27990)"
+    },
+    {
+     "hash": "8f9ae20c8",
+     "date": "2026-10-05T15:10:16+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "ci : disable failing test on virtual Metal device (#29993)"
+    },
+    {
+     "hash": "9871df591",
+     "date": "2026-10-05T14:02:40+02:00",
+     "author": "Xuan-Son Nguyen",
+     "server_user": "",
+     "subject": "server: support vision input for Clef (#29969)"
+    },
+    {
+     "hash": "8b2fbaf32",
+     "date": "2026-10-05T13:43:07+02:00",
+     "author": "Konrad Moren",
+     "server_user": "",
+     "subject": "CUDA: Optimize accumulation in mmq for NVFP4 type (#29857)"
+    },
+    {
+     "hash": "2ed93db47",
+     "date": "2026-10-05T12:33:10+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : disable unused qemu in docker build (#29984)"
+    },
+    {
+     "hash": "8e1642198",
+     "date": "2026-10-05T11:22:23+02:00",
+     "author": "Yufeng He",
+     "server_user": "",
+     "subject": "server: reject partial media truncation (#24076)"
+    },
+    {
+     "hash": "806eee984",
+     "date": "2026-10-05T10:38:26+02:00",
+     "author": "François-Xavier Gsell",
+     "server_user": "",
+     "subject": "vulkan: fix stale prealloc_y reuse across flash attention and soft_max (#29591)"
+    },
+    {
+     "hash": "b3daa077a",
+     "date": "2026-10-05T10:37:54+02:00",
+     "author": "François-Xavier Gsell",
+     "server_user": "",
+     "subject": "vulkan: sparse flash attention for quantized K/V (#29639)"
+    },
+    {
+     "hash": "c173a53bd",
+     "date": "2026-10-05T11:36:25+03:00",
+     "author": "Georgi Gerganov",
+     "server_user": "",
+     "subject": "llama : fix unexpected graph reallocation in the k-pool models (#29958)"
+    },
+    {
+     "hash": "210791069",
+     "date": "2026-10-05T11:27:30+03:00",
+     "author": "Evan Huus",
+     "server_user": "",
+     "subject": "kv-cache: fix restoring mismatched KV cache rotation by saving exact rotation metadata (#28498)"
+    },
+    {
+     "hash": "e5983d670",
+     "date": "2026-10-05T09:36:57+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : winget urls must be separate strings (#29978)"
+    },
+    {
+     "hash": "4ca6b76f0",
+     "date": "2026-10-05T09:36:03+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : fix docker workflow permissions (#29979)"
+    },
+    {
+     "hash": "9f12cd4a4",
+     "date": "2026-10-05T10:34:15+03:00",
+     "author": "Alan Tseng",
+     "server_user": "",
+     "subject": "ggml-cpu : add Q8_0 IME1 matrix kernel for SpacemiT X60 (#28479)"
+    },
+    {
+     "hash": "ebe18bee5",
+     "date": "2026-10-05T10:18:55+03:00",
+     "author": "Ed Addario",
+     "server_user": "",
+     "subject": "vulkan : Fix undeclared identifiers when -DGGML_VULKAN_RUN_TESTS=ON (#29912)"
+    },
+    {
+     "hash": "8216c8462",
+     "date": "2026-10-05T08:56:45+02:00",
+     "author": "Masashi Yoshimura",
+     "server_user": "",
+     "subject": "webgpu: add MMVQ support for Q1_0/Q5_0/Q5_1/Q3_K/Q5_K/Q6_K/MXFP4 (#29483)"
+    },
+    {
+     "hash": "1b43d3116",
+     "date": "2026-10-05T09:39:47+03:00",
+     "author": "Pascal",
+     "server_user": "",
+     "subject": "cuda: tile the lightning indexer over keys and tokens for 4 heads (#29901)"
+    },
+    {
+     "hash": "a3a1c4747",
+     "date": "2026-10-05T08:29:13+03:00",
+     "author": "pratiknarola-t",
+     "server_user": "",
+     "subject": "metal : few-row MMA mat-mul (#29869)"
+    },
+    {
+     "hash": "9d3aba6b5",
+     "date": "2026-10-05T10:26:50+05:30",
+     "author": "ynankani",
+     "server_user": "",
+     "subject": "CUDA: use MMVF for thin f16/bf16 mul_mat at small batch size (#29633)"
+    },
+    {
+     "hash": "d89651a7b",
+     "date": "2026-10-05T08:32:07+05:30",
+     "author": "anujj",
+     "server_user": "",
+     "subject": "CUDA: prefer whole-tile FlashAttention scheduling for efficient two-stage kernels (#29435)"
+    },
+    {
+     "hash": "a7fb71fab",
+     "date": "2026-10-05T01:59:37+02:00",
+     "author": "Pascal",
+     "server_user": "",
+     "subject": "log, server: self contained colors, split child commands from logs in router mode (#29895)"
+    },
+    {
+     "hash": "0bb496dbd",
+     "date": "2026-10-05T01:35:49+02:00",
+     "author": "Xuan-Son Nguyen",
+     "server_user": "",
+     "subject": "llama: support both embd + raw tokens in batch (#29622)"
+    },
+    {
+     "hash": "2ca15f540",
+     "date": "2026-10-04T22:48:30+02:00",
+     "author": "Johannes Gäßler",
+     "server_user": "",
+     "subject": "CUDA: refactor swizzling code (#29612)"
+    },
+    {
+     "hash": "a7b94df2c",
+     "date": "2026-10-04T22:22:17+03:00",
+     "author": "SXX",
+     "server_user": "",
+     "subject": "ggml-cpu: support BF16/FP16/FP32 K tails in tinyBLAS on x86 (#29806)"
+    },
+    {
+     "hash": "0eb6d9a81",
+     "date": "2026-10-04T22:21:31+03:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "cuda : move neu_padded to where it is used (#29940)"
+    },
+    {
+     "hash": "2e7c58c54",
+     "date": "2026-10-04T19:28:24+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : windows llvm build requires ninja multi-config (#29959)"
+    },
+    {
+     "hash": "7f2dd88b0",
+     "date": "2026-10-04T18:46:15+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : add windows arm64 vulkan release (#29954)"
+    },
+    {
+     "hash": "bf79dbbcd",
+     "date": "2026-10-04T21:38:19+05:30",
+     "author": "Aman Gupta",
+     "server_user": "",
+     "subject": "AGENTS.md : revamp (#29656)"
+    },
+    {
+     "hash": "dbe4c3ed4",
+     "date": "2026-10-04T17:59:21+02:00",
+     "author": "Anas",
+     "server_user": "",
+     "subject": "chat-peg-parser : clear current_tool when pending_tool_call is reset (#29942)"
+    },
+    {
+     "hash": "46847e615",
+     "date": "2026-10-04T16:13:26+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : set default permissions (#29945)"
+    },
+    {
+     "hash": "2bc563573",
+     "date": "2026-10-04T15:47:21+02:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "cuda : move blocks_per_col to where it is used (#29939)"
+    },
+    {
+     "hash": "dd266785c",
+     "date": "2026-10-04T14:10:43+02:00",
+     "author": "Johannes Gäßler",
+     "server_user": "",
+     "subject": "CUDA: fix MMQ memory fault if n_expert >> n_ubatch (#29941)"
+    },
+    {
+     "hash": "16c163d56",
+     "date": "2026-10-04T14:05:21+02:00",
+     "author": "Ruben Ortlam",
+     "server_user": "",
+     "subject": "vulkan: fix rdna4 mat_vec tuning (#29934)"
+    },
+    {
+     "hash": "050439614",
+     "date": "2026-10-04T11:24:53+02:00",
+     "author": "Ed Addario",
+     "server_user": "",
+     "subject": "imatrix: calculate activation-based statistics for new format (GGUF) imatrices (#14891)"
+    },
+    {
+     "hash": "8330e9696",
+     "date": "2026-10-04T11:45:22+03:00",
+     "author": "Pranesh Gonegandla",
+     "server_user": "",
+     "subject": "spec : fix n-gram drafts rejected at temp > 0 after truncation (#29924)"
+    },
+    {
+     "hash": "6716df694",
+     "date": "2026-10-04T11:35:33+03:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "common : prepare load_from_models_dir() for path conversion (#29674)"
+    },
+    {
+     "hash": "bf9a0ccce",
+     "date": "2026-10-04T11:34:43+03:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "server : fix dead LLAMA_ARG_HF_REPO_FILE key in preset allow-list (#29938)"
+    },
+    {
+     "hash": "0faee5004",
+     "date": "2026-10-04T09:45:49+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : pushing tag needs deploy key (#29937)"
+    },
+    {
+     "hash": "f98b31c67",
+     "date": "2026-10-04T09:31:24+02:00",
+     "author": "Sigbjørn Skjæret",
+     "server_user": "",
+     "subject": "ci : improve release flow (#29913)"
+    },
+    {
+     "hash": "11fe02151",
+     "date": "2026-10-04T09:07:47+09:00",
+     "author": "Masashi Yoshimura",
+     "server_user": "",
+     "subject": "webgpu: add f16 support to fill/set_rows (#29897)"
+    },
+    {
+     "hash": "836d57176",
+     "date": "2026-10-03T19:47:54+02:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "mtmd : fix deprecated strdup warning on Windows (#29863)"
+    },
+    {
+     "hash": "eec18f5d3",
+     "date": "2026-10-03T19:08:47+02:00",
+     "author": "Alessandro de Oliveira Faria (A.K.A.CABELO)",
+     "server_user": "",
+     "subject": "vendor : update cpp-httplib to 0.59.0 (#29886)"
+    },
+    {
+     "hash": "1537a0a8b",
+     "date": "2026-10-03T17:19:13+02:00",
+     "author": "Nik Bogatyrev",
+     "server_user": "",
+     "subject": "server : fix laya abort by limiting n_batch to n_ubatch (#29903)"
+    },
+    {
+     "hash": "edd6e2bbd",
+     "date": "2026-10-03T15:48:24+02:00",
+     "author": "Adrien Gallouët",
+     "server_user": "",
+     "subject": "common : add common_is_tty() helper and fix deprecated warnings on Windows (#29860)"
+    },
+    {
+     "hash": "9bf55f4a3",
+     "date": "2026-10-03T15:40:50+02:00",
+     "author": "Yash Raj Pandey",
+     "server_user": "",
+     "subject": "chat : honor json_schema in Ling 3.0 parser (#29813)"
+    },
+    {
+     "hash": "a55e952b8",
+     "date": "2026-10-03T14:56:07+02:00",
+     "author": "Pascal",
+     "server_user": "",
+     "subject": "ci: fix flaky ADD_ADD f16 by using the fused ADD tolerance (#29904)"
+    },
+    {
+     "hash": "436f6f89e",
+     "date": "2026-10-03T14:02:05+02:00",
+     "author": "Pascal",
+     "server_user": "",
+     "subject": "graph: gather the recurrent states once so the reserve covers every split (#29856)"
+    },
+    {
+     "hash": "b92761a51",
+     "date": "2026-10-03T11:59:25+03:00",
+     "author": "Ravi Panchumarthy",
+     "server_user": "",
+     "subject": "ggml-openvino: update to 2026.4.1, optimize performance, expand ops, improve device listing. (#29852)"
+    }
+   ]
+  }
+ ],
+ "uncommitted": {
+  "repo": "vendor/jarvisos",
+  "files": [
+   {
+    "code": "M",
+    "kind": "modified",
+    "path": "AGENT_EXPERIENCE.md"
+   },
+   {
+    "code": "M",
+    "kind": "modified",
+    "path": "TESTING.md"
+   },
+   {
+    "code": "M",
+    "kind": "modified",
+    "path": "harness/CLAUDE.md"
+   },
+   {
+    "code": "M",
+    "kind": "modified",
+    "path": "harness/jh"
+   },
+   {
+    "code": "??",
+    "kind": "untracked",
+    "path": "PROMPT_INJECTION.md"
+   },
+   {
+    "code": "??",
+    "kind": "untracked",
+    "path": "site/"
+   },
+   {
+    "code": "??",
+    "kind": "untracked",
+    "path": "skills/jarvisos-architecture/"
+   },
+   {
+    "code": "??",
+    "kind": "untracked",
+    "path": "skills/jarvisos-ax/"
+   }
+  ]
+ },
+ "decisions_checked": "10 Nov 2026",
+ "decisions": [
+  {
+   "n": 1,
+   "title": "Jarvis is a system service, not an app",
+   "state": "built",
+   "status": "Built and running on the emulator. Not yet on a phone. The `jarvisos-ax` skill names a plan (TASK_2) to move inference and agent logic out of `system_server`; that plan is not written down in the repo yet."
+  },
+  {
+   "n": 2,
+   "title": "Apps talk to Jarvis over Binder, not HTTP",
+   "state": "built",
+   "status": "Built."
+  },
+  {
+   "n": 3,
+   "title": "The tool description is separate from how the tool is called",
+   "state": "built",
+   "status": "Built."
+  },
+  {
+   "n": 4,
+   "title": "App tools are broadcast receivers; built-in tools run inside Jarvis",
+   "state": "built",
+   "status": "Built."
+  },
+  {
+   "n": 5,
+   "title": "Only trusted callers may ask Jarvis to act",
+   "state": "built",
+   "status": "Built. `jarvis_session` needs no permission, by design: any app may open a session, but only for its own declared session and only while in the foreground (decision 10)."
+  },
+  {
+   "n": 6,
+   "title": "One door to the models, two engines behind it",
+   "state": "built",
+   "status": "Both built. Cactus builds for x86_64 through a SIMDe shim (22 Oct) but `auto` never picks it there. The emulator uses llama.cpp with Qwen3 1.7B. On a phone, `auto` prefers Cactus."
+  },
+  {
+   "n": 7,
+   "title": "A small model answers first (the fast path)",
+   "state": "built",
+   "status": "Built, with one open problem (roadblock 35): Needle always names a tool, and its confidence scores that guess, not whether the request is a command at all. \"How are you doing today\" scored 0.80 and read the notifications. Not fixed yet. The 2 Oct Cactus notes warned that the demo model could quietly become the architecture; Needle is now in the request path, so that warning applies."
+  },
+  {
+   "n": 8,
+   "title": "The agent loop stops after five turns",
+   "state": "built",
+   "status": "Built."
+  },
+  {
+   "n": 9,
+   "title": "ObjectBox never stores embeddings",
+   "state": "built",
+   "status": "The rule holds. Two follow-ups from the 2 Oct storage notes are not done: index IDs are still stored as engine IDs, not JarvisOS-owned IDs with a mapping, and ObjectBox is used directly in about 58 places outside `core/` and `model/` instead of behind one storage layer."
+  },
+  {
+   "n": 10,
+   "title": "In a session, apps send data, never prompts",
+   "state": "built",
+   "status": "Built (emulator). One gap: the manifest's `rules` and `persona` are app-written text that goes into the system prompt (`SessionPrompt.java`, lines 69 to 71). So \"never prompts\" is true for events, not for the manifest."
+  },
+  {
+   "n": 11,
+   "title": "One fence on the one route every tool call takes",
+   "state": "built",
+   "status": "Built. The fence scopes by session, not by risk: outside a session, every non-session tool can run."
+  },
+  {
+   "n": 12,
+   "title": "Raw history lasts a day; learned facts stay",
+   "state": "built",
+   "status": "Built. Tool results are kept as summaries of at most 600 characters."
+  },
+  {
+   "n": 13,
+   "title": "Nothing in system_server opens the network",
+   "state": "built",
+   "status": "Built for Cactus. Check any new native library for network use before adding it."
+  },
+  {
+   "n": 14,
+   "title": "Dangerous tools ask first (partly built)",
+   "state": "partial",
+   "status": "Partial. Only `make_phone_call` sets it; `send_sms` runs without asking. There is no way yet to confirm and then run (the code notes this as \"Phase 7\"). The `jarvisos-ax` ERD replaces this flag with `sideEffect` on the tool and a `GRANT` with `always`, `ask` or `never`."
+  },
+  {
+   "n": 15,
+   "title": "One shared build server, one way in (`jh`)",
+   "state": "built",
+   "status": "Built (28 to 29 Oct 2026). Open: the disk is at 92 % and more storage has been asked of Hetzner; attribution is the `Server-user` trailer, which root can still fake."
+  }
+ ]
+}

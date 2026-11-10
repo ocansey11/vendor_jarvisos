@@ -7,6 +7,9 @@
 > of ASD-STE100 (Simplified Technical English): short sentences, active voice,
 > one meaning for each term. It was not checked with an STE checker.
 > The page for the team, with pictures: `docs/agent-experience.html`.
+> The data model under AX (tools, grants, consent, audit) is a draft ERD of
+> 10 November 2026 in the `jarvisos-ax` skill (`skills/jarvisos-ax/`). Its
+> differences from the code: `skills/jarvisos-ax/references/code-today.md`.
 
 An app on JarvisOS has two users: the person and Jarvis. AX is how an app
 works with Jarvis. AX has three parts (section 11.1): tools (built), views
